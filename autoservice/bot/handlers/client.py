@@ -49,11 +49,11 @@ PAGE_SIZE = 5
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "Link to Order")
+@router.message(F.text == "🔗 Buyurtmaga bog'lanish")
 async def client_link_handler(message: Message, state: FSMContext, db_user: dict):
     await state.set_state(ClientLinkOrder.waiting_for_order_number)
     await message.answer(
-        "Please enter your order number (for example: A-0042).",
+        "Buyurtma raqamingizni kiriting (masalan, A-00123):",
         reply_markup=get_cancel_keyboard(),
     )
 
@@ -65,7 +65,7 @@ async def client_order_number_handler(
     if message.text and message.text.strip().lower() == "cancel":
         await state.clear()
         await message.answer(
-            "Cancelled.", reply_markup=get_main_keyboard("client")
+            "Bekor qilindi.", reply_markup=get_main_keyboard("client")
         )
         return
 
@@ -73,7 +73,7 @@ async def client_order_number_handler(
     order = await get_order_by_number(order_number)
     if not order:
         await message.answer(
-            "Order not found. Please check the number and try again."
+            "Buyurtma topilmadi. Iltimos, raqamni tekshirib, qayta urinib ko'ring."
         )
         return
 
@@ -82,7 +82,7 @@ async def client_order_number_handler(
 
     car = await get_car_by_order_number(order_number)
     card = build_order_card(order, car)
-    await message.answer("Your car has been linked successfully.")
+    await message.answer("Mashinangiz muvaffaqiyatli bog'landi.")
     await message.answer(
         card,
         parse_mode="HTML",
@@ -96,26 +96,30 @@ async def client_order_number_handler(
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "Car Status")
+@router.message(F.text == "🚗 Mashina holati")
 async def client_status_handler(message: Message, db_user: dict):
     orders = await get_orders_by_client(db_user["id"])
     if not orders:
         await message.answer(
-            "You have no linked orders yet. Tap Link to Order to connect your car."
+            "Sizda faol buyurtmalar yo'q. Iltimos, avval buyurtmaga bog'laning.",
+            reply_markup=get_main_keyboard("client"),
         )
         return
-
-    active = [o for o in orders if o["status"] in ("new", "preparation", "in_process", "ready")]
-    to_show = active if active else [orders[0]]
-
-    for order in to_show:
-        car = await get_car_by_order_number(order["order_number"])
-        card = build_order_card(order, car)
+    active = [o for o in orders if o["status"] not in ("closed", "cancelled")]
+    if not active:
         await message.answer(
-            card,
-            parse_mode="HTML",
-            reply_markup=get_order_card_keyboard(order["order_number"]),
+            "Hozirda faol buyurtmalaringiz yo'q.",
+            reply_markup=get_main_keyboard("client"),
         )
+        return
+    order = active[0]
+    car = await get_car_by_order_number(order["order_number"])
+    card = build_order_card(order, car)
+    await message.answer(
+        card,
+        parse_mode="HTML",
+        reply_markup=get_order_card_keyboard(order["order_number"]),
+    )
 
 
 # ------------------------------------------------------------------
@@ -123,12 +127,13 @@ async def client_status_handler(message: Message, db_user: dict):
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "My Orders")
+@router.message(F.text == "📋 Mening buyurtmalarim")
 async def client_my_orders_handler(message: Message, db_user: dict):
     orders = await get_orders_by_client(db_user["id"])
     if not orders:
         await message.answer(
-            "You have no linked orders yet. Tap Link to Order to connect your car."
+            "Sizda hali buyurtmalar yo'q.",
+            reply_markup=get_main_keyboard("client"),
         )
         return
 

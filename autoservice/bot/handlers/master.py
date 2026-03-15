@@ -10,18 +10,17 @@ router = Router()
 router.message.filter(MagicData(F.db_user["role"] == "master"))
 
 
-@router.message(F.text == "New Order")
+@router.message(F.text == "🆕 Yangi buyurtma")
 async def master_new_order_handler(message: Message, db_user: dict):
     url = f"{WEB_URL}/new-order"
     await message.answer(
-        f"Open the web interface to create a new order:\n\n"
-        f"<a href='{url}'>{url}</a>",
+        f"🆕 <b>Yangi buyurtma yaratish</b>\n\nYangi buyurtma yaratish uchun veb panelni oching:\n{url}",
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
 
 
-@router.message(F.text == "My Orders")
+@router.message(F.text == "📋 Mening buyurtmalarim")
 async def master_my_orders_handler(message: Message, db_user: dict):
     active_statuses = ["new", "preparation", "in_process", "ready"]
     orders = await get_orders_by_master(db_user["id"])
@@ -49,7 +48,7 @@ async def master_my_orders_handler(message: Message, db_user: dict):
     await message.answer("\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
 
 
-@router.message(F.text == "Statistics")
+@router.message(F.text == "📊 Statistika")
 async def master_statistics_handler(message: Message, db_user: dict):
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)

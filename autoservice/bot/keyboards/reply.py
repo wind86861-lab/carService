@@ -5,20 +5,20 @@ def get_main_keyboard(role: str) -> ReplyKeyboardMarkup:
     """Return the appropriate main menu keyboard for the given role."""
     if role == "master":
         buttons = [
-            [KeyboardButton(text="New Order"), KeyboardButton(text="My Orders")],
-            [KeyboardButton(text="Statistics")],
+            [KeyboardButton(text="🆕 Yangi buyurtma"), KeyboardButton(text="📋 Mening buyurtmalarim")],
+            [KeyboardButton(text="📊 Statistika")],
         ]
     elif role == "admin":
         buttons = [
-            [KeyboardButton(text="Dashboard"), KeyboardButton(text="All Orders")],
-            [KeyboardButton(text="Clients"), KeyboardButton(text="Masters")],
-            [KeyboardButton(text="Send Message")],
+            [KeyboardButton(text="📊 Boshqaruv paneli"), KeyboardButton(text="📋 Barcha buyurtmalar")],
+            [KeyboardButton(text="👥 Mijozlar"), KeyboardButton(text="🔧 Ustalar")],
+            [KeyboardButton(text="📢 Xabar yuborish")],
         ]
     else:
         # client (default)
         buttons = [
-            [KeyboardButton(text="Car Status"), KeyboardButton(text="Link to Order")],
-            [KeyboardButton(text="My Orders")],
+            [KeyboardButton(text="🚗 Mashina holati"), KeyboardButton(text="🔗 Buyurtmaga bog'lanish")],
+            [KeyboardButton(text="📋 Mening buyurtmalarim")],
         ]
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
@@ -27,7 +27,7 @@ def get_phone_keyboard() -> ReplyKeyboardMarkup:
     """Return a keyboard with a single 'Share Phone Number' contact-request button."""
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Share Phone Number", request_contact=True)]
+            [KeyboardButton(text="📱 Telefon raqamni yuborish", request_contact=True)]
         ],
         resize_keyboard=True,
     )
@@ -36,6 +36,6 @@ def get_phone_keyboard() -> ReplyKeyboardMarkup:
 def get_cancel_keyboard() -> ReplyKeyboardMarkup:
     """Return a keyboard with a single 'Cancel' button."""
     return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="Cancel")]],
+        keyboard=[[KeyboardButton(text="❌ Bekor qilish")]],
         resize_keyboard=True,
     )

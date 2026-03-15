@@ -18,19 +18,19 @@ router.message.filter(MagicData(F.db_user["role"] == "admin"))
 router.callback_query.filter(MagicData(F.db_user["role"] == "admin"))
 
 
-@router.message(F.text == "Dashboard", StateFilter(None))
+@router.message(F.text == "📊 Boshqaruv paneli", StateFilter(None))
 async def admin_dashboard_handler(message: Message, db_user: dict):
     try:
         stats = await get_dashboard_stats()
         text = (
-            "<b>📊 Admin Dashboard</b>\n\n"
-            f"🔄 Active orders: <b>{stats['active_orders']}</b>\n"
-            f"✅ Ready for pickup: <b>{stats['ready_orders']}</b>\n\n"
-            f"💰 This month revenue: <b>{format_money(stats['month_revenue'])}</b>\n"
-            f"📈 This month profit: <b>{format_money(stats['month_profit'])}</b>\n\n"
-            f"👤 Active clients: <b>{stats['total_clients']}</b>\n"
-            f"🔧 Active masters: <b>{stats['total_masters']}</b>\n\n"
-            f"<a href='{WEB_URL}/admin'>Open Admin Panel →</a>"
+            "<b>📊 Boshqaruv paneli</b>\n\n"
+            f"🔄 Faol buyurtmalar: <b>{stats['active_orders']}</b>\n"
+            f"✅ Tayyor buyurtmalar: <b>{stats['ready_orders']}</b>\n\n"
+            f"💰 Shu oy daromad: <b>{format_money(stats['month_revenue'])}</b>\n"
+            f"📈 Shu oy foyda: <b>{format_money(stats['month_profit'])}</b>\n\n"
+            f"👤 Faol mijozlar: <b>{stats['total_clients']}</b>\n"
+            f"🔧 Faol ustalar: <b>{stats['total_masters']}</b>\n\n"
+            f"<a href='{WEB_URL}/admin'>Admin panelni ochish →</a>"
         )
     except Exception:
         logger.exception("Failed to load dashboard stats")
@@ -38,38 +38,38 @@ async def admin_dashboard_handler(message: Message, db_user: dict):
     await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
 
 
-@router.message(F.text == "All Orders", StateFilter(None))
+@router.message(F.text == "📋 Barcha buyurtmalar", StateFilter(None))
 async def admin_all_orders_handler(message: Message, db_user: dict):
     await message.answer(
-        f"📋 <b>All Orders</b>\n\nOpen the admin panel to manage all orders:\n{WEB_URL}/admin/orders",
+        f"📋 <b>Barcha buyurtmalar</b>\n\nBarcha buyurtmalarni boshqarish uchun admin panelni oching:\n{WEB_URL}/admin/orders",
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
 
 
-@router.message(F.text == "Clients", StateFilter(None))
+@router.message(F.text == "👥 Mijozlar", StateFilter(None))
 async def admin_clients_handler(message: Message, db_user: dict):
     await message.answer(
-        f"👥 <b>Client Management</b>\n\nOpen the admin panel to manage clients:\n{WEB_URL}/admin/clients",
+        f"👥 <b>Mijozlarni boshqarish</b>\n\nMijozlarni boshqarish uchun admin panelni oching:\n{WEB_URL}/admin/clients",
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
 
 
-@router.message(F.text == "Masters", StateFilter(None))
+@router.message(F.text == "🔧 Ustalar", StateFilter(None))
 async def admin_masters_handler(message: Message, db_user: dict):
     await message.answer(
-        f"🔧 <b>Master Management</b>\n\nOpen the admin panel to manage masters:\n{WEB_URL}/admin/masters",
+        f"🔧 <b>Ustalarni boshqarish</b>\n\nUstalarni boshqarish uchun admin panelni oching:\n{WEB_URL}/admin/masters",
         parse_mode="HTML",
         disable_web_page_preview=True,
     )
 
 
-@router.message(F.text == "Send Message", StateFilter(None))
+@router.message(F.text == "📢 Xabar yuborish", StateFilter(None))
 async def admin_broadcast_handler(message: Message, state: FSMContext):
     await state.set_state(AdminBroadcast.waiting_for_target)
     await message.answer(
-        "📢 <b>Broadcast Message</b>\n\nSelect the target audience:",
+        "📢 <b>Ommaviy xabar</b>\n\nMaqsadli auditoriyani tanlang:",
         parse_mode="HTML",
         reply_markup=get_broadcast_target_keyboard(),
     )

@@ -58,7 +58,7 @@ async def start_handler(message: Message, state: FSMContext, db_user: dict):
             await state.update_data(pending_order_number=pending_order)
         await state.set_state(Registration.waiting_for_phone)
         await message.answer(
-            "Welcome to AutoService Bot! To get started, please share your phone number.",
+            "AutoService botiga xush kelibsiz! Boshlash uchun telefon raqamingizni yuboring.",
             reply_markup=get_phone_keyboard(),
         )
         return
@@ -67,11 +67,11 @@ async def start_handler(message: Message, state: FSMContext, db_user: dict):
         await _try_link_order(message, pending_order, db_user)
 
     if role == "admin":
-        text = f"Welcome, {name}! You are logged in as an administrator."
+        text = f"Xush kelibsiz, {name}! Siz administrator sifatida kirdingiz."
     elif role == "master":
-        text = f"Welcome, {name}! You are logged in as a master."
+        text = f"Xush kelibsiz, {name}! Siz usta sifatida kirdingiz."
     else:
-        text = f"Welcome back, {name}! Use the menu below to track your car."
+        text = f"Xush kelibsiz, {name}! Mashinangizni kuzatish uchun quyidagi menyudan foydalaning."
 
     await message.answer(text, reply_markup=get_main_keyboard(role))
 
@@ -92,7 +92,7 @@ async def phone_handler(message: Message, state: FSMContext, db_user: dict):
         await _try_link_order(message, pending_order, db_user)
 
     await message.answer(
-        "Phone number saved! Use the menu below.",
+        "Telefon raqam saqlandi! Quyidagi menyudan foydalaning.",
         reply_markup=get_main_keyboard(role),
     )
 
@@ -103,32 +103,32 @@ async def help_handler(message: Message, db_user: dict):
     role = db_user["role"]
     if role == "admin":
         text = (
-            "/start — restart the bot\n"
-            "/help — show this help\n\n"
-            "Menu buttons:\n"
-            "Dashboard — view summary statistics\n"
-            "All Orders — browse all orders\n"
-            "Clients — manage clients\n"
-            "Masters — manage masters\n"
-            "Send Message — broadcast a message"
+            "/start — botni qayta ishga tushirish\n"
+            "/help — yordam ko'rsatish\n\n"
+            "Menyu tugmalari:\n"
+            "📊 Boshqaruv paneli — umumiy statistikani ko'rish\n"
+            "📋 Barcha buyurtmalar — barcha buyurtmalarni ko'rish\n"
+            "👥 Mijozlar — mijozlarni boshqarish\n"
+            "🔧 Ustalar — ustalarni boshqarish\n"
+            "📢 Xabar yuborish — ommaviy xabar yuborish"
         )
     elif role == "master":
         text = (
-            "/start — restart the bot\n"
-            "/help — show this help\n\n"
-            "Menu buttons:\n"
-            "New Order — create a new order\n"
-            "My Orders — view your assigned orders\n"
-            "Statistics — view your performance stats"
+            "/start — botni qayta ishga tushirish\n"
+            "/help — yordam ko'rsatish\n\n"
+            "Menyu tugmalari:\n"
+            "🆕 Yangi buyurtma — yangi buyurtma yaratish\n"
+            "📋 Mening buyurtmalarim — buyurtmalaringizni ko'rish\n"
+            "📊 Statistika — ish ko'rsatkichlaringizni ko'rish"
         )
     else:
         text = (
-            "/start — restart the bot\n"
-            "/help — show this help\n\n"
-            "Menu buttons:\n"
-            "Car Status — check the status of your car\n"
-            "Link to Order — link yourself to an existing order\n"
-            "My Orders — view your order history"
+            "/start — botni qayta ishga tushirish\n"
+            "/help — yordam ko'rsatish\n\n"
+            "Menyu tugmalari:\n"
+            "🚗 Mashina holati — mashinangiz holatini tekshirish\n"
+            "🔗 Buyurtmaga bog'lanish — mavjud buyurtmaga bog'lanish\n"
+            "📋 Mening buyurtmalarim — buyurtmalar tarixini ko'rish"
         )
     await message.answer(text)
 
@@ -136,4 +136,4 @@ async def help_handler(message: Message, db_user: dict):
 @router.message()
 async def unknown_handler(message: Message):
     """Catch-all for unrecognized text messages."""
-    await message.answer("Sorry, I did not understand that. Type /help to see available commands.")
+    await message.answer("Kechirasiz, tushunmadim. Mavjud buyruqlarni ko'rish uchun /help yozing.")
