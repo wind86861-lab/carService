@@ -18,7 +18,7 @@ router.message.filter(MagicData(F.db_user["role"] == "admin"))
 router.callback_query.filter(MagicData(F.db_user["role"] == "admin"))
 
 
-@router.message(F.text == "📊 Boshqaruv paneli", StateFilter(None))
+@router.message(F.text == "📊 Boshqaruv paneli")
 async def admin_dashboard_handler(message: Message, db_user: dict):
     try:
         stats = await get_dashboard_stats()
@@ -38,7 +38,7 @@ async def admin_dashboard_handler(message: Message, db_user: dict):
     await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
 
 
-@router.message(F.text == "📋 Barcha buyurtmalar", StateFilter(None))
+@router.message(F.text == "📋 Barcha buyurtmalar")
 async def admin_all_orders_handler(message: Message, db_user: dict):
     await message.answer(
         f"📋 <b>Barcha buyurtmalar</b>\n\nBarcha buyurtmalarni boshqarish uchun admin panelni oching:\n{WEB_URL}/admin/orders",
@@ -47,7 +47,7 @@ async def admin_all_orders_handler(message: Message, db_user: dict):
     )
 
 
-@router.message(F.text == "👥 Mijozlar", StateFilter(None))
+@router.message(F.text == "👥 Mijozlar")
 async def admin_clients_handler(message: Message, db_user: dict):
     await message.answer(
         f"👥 <b>Mijozlarni boshqarish</b>\n\nMijozlarni boshqarish uchun admin panelni oching:\n{WEB_URL}/admin/clients",
@@ -56,7 +56,7 @@ async def admin_clients_handler(message: Message, db_user: dict):
     )
 
 
-@router.message(F.text == "🔧 Ustalar", StateFilter(None))
+@router.message(F.text == "🔧 Ustalar")
 async def admin_masters_handler(message: Message, db_user: dict):
     await message.answer(
         f"🔧 <b>Ustalarni boshqarish</b>\n\nUstalarni boshqarish uchun admin panelni oching:\n{WEB_URL}/admin/masters",
@@ -65,7 +65,7 @@ async def admin_masters_handler(message: Message, db_user: dict):
     )
 
 
-@router.message(F.text == "📢 Xabar yuborish", StateFilter(None))
+@router.message(F.text == "📢 Xabar yuborish")
 async def admin_broadcast_handler(message: Message, state: FSMContext):
     await state.set_state(AdminBroadcast.waiting_for_target)
     await message.answer(
