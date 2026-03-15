@@ -2,8 +2,9 @@ import logging
 
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
-from aiogram.filters import MagicData
 from aiogram.fsm.context import FSMContext
+
+from bot.filters import RoleFilter
 
 from bot.states import ClientLinkOrder, ClientFeedback
 from bot.keyboards.reply import get_main_keyboard, get_cancel_keyboard
@@ -39,7 +40,8 @@ from bot.utils.notifications import (
 logger = logging.getLogger(__name__)
 
 router = Router()
-router.message.filter(MagicData(F.db_user["role"] == "client"))
+router.message.filter(RoleFilter("client"))
+router.callback_query.filter(RoleFilter("client"))
 
 PAGE_SIZE = 5
 
