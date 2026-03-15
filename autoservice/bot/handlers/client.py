@@ -62,10 +62,10 @@ async def client_link_handler(message: Message, state: FSMContext, db_user: dict
 async def client_order_number_handler(
     message: Message, state: FSMContext, db_user: dict, bot: Bot
 ):
-    if message.text and message.text.strip().lower() == "cancel":
+    if message.text and (message.text.strip().lower() == "cancel" or message.text.strip() == "❌ Bekor qilish"):
         await state.clear()
         await message.answer(
-            "Bekor qilindi.", reply_markup=get_main_keyboard("client")
+            "❌ Bekor qilindi.", reply_markup=get_main_keyboard("client")
         )
         return
 
@@ -73,7 +73,7 @@ async def client_order_number_handler(
     order = await get_order_by_number(order_number)
     if not order:
         await message.answer(
-            "Buyurtma topilmadi. Iltimos, raqamni tekshirib, qayta urinib ko'ring."
+            "❌ Buyurtma topilmadi. Iltimos, raqamni tekshirib, qayta urinib ko'ring."
         )
         return
 
@@ -82,13 +82,13 @@ async def client_order_number_handler(
 
     car = await get_car_by_order_number(order_number)
     card = build_order_card(order, car)
-    await message.answer("Mashinangiz muvaffaqiyatli bog'landi.")
+    await message.answer("✅ Mashinangiz muvaffaqiyatli bog'landi!")
     await message.answer(
         card,
         parse_mode="HTML",
         reply_markup=get_order_card_keyboard(order_number),
     )
-    await message.answer("Menu:", reply_markup=get_main_keyboard("client"))
+    await message.answer("📱 Menyu:", reply_markup=get_main_keyboard("client"))
 
 
 # ------------------------------------------------------------------
@@ -161,7 +161,7 @@ async def orders_page_callback(callback: CallbackQuery, db_user: dict):
     page = orders[offset : offset + PAGE_SIZE]
 
     if not page:
-        await callback.answer("No more orders.")
+        await callback.answer("Boshqa buyurtmalar yo'q.")
         return
 
     lines = []
@@ -192,12 +192,12 @@ async def view_photos_callback(callback: CallbackQuery, db_user: dict):
     order_number = callback.data.split(":", 1)[1]
     order = await get_order_by_number(order_number)
     if not order:
-        await callback.answer("Order not found.", show_alert=True)
+        await callback.answer("❌ Buyurtma topilmadi.", show_alert=True)
         return
 
     photos = await get_photos_by_order(order["id"])
     if not photos:
-        await callback.answer("No photos available for this order.", show_alert=True)
+        await callback.answer("📷 Bu buyurtma uchun rasmlar yo'q.", show_alert=True)
         return
 
     media = [InputMediaPhoto(media=p["file_id"]) for p in photos]
@@ -216,12 +216,12 @@ async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: 
 
     order = await get_order_by_number(order_number)
     if order and order["client_confirmed"]:
-        await callback.answer("You have already confirmed receipt for this order.", show_alert=True)
+        await callback.answer("✅ Siz allaqachon qabul qilganingizni tasdiqlagansiz.", show_alert=True)
         return
 
     await confirm_client_receipt(order_number)
 
-    new_text = callback.message.text + "\n\n✅ You have confirmed receipt. The order is now closed."
+    new_text = callback.message.text + "\n\n✅ Siz mashinani qabul qilganingizni tasdiqladingiz. Buyurtma yopildi."
     await callback.message.edit_text(new_text, reply_markup=None)
 
     order = await get_order_by_number(order_number)
@@ -247,7 +247,7 @@ async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: 
 @router.callback_query(F.data.startswith("dispute:"))
 async def dispute_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
     order_number = callback.data.split(":", 1)[1]
-    new_text = callback.message.text + "\n\n⚠️ We have notified the master about your concern."
+    new_text = callback.message.text + "\n\n⚠️ Biz ustani sizning muammo haqida xabardor qildik."
     await callback.message.edit_text(new_text, reply_markup=None)
 
     order = await get_order_by_number(order_number)
@@ -287,17 +287,17 @@ async def feedback_rating_callback(
     order_id = data.get("feedback_order_id")
 
     await state.update_data(feedback_rating=rating)
-    await callback.message.edit_text(f"You rated this service: {rating}/10")
+    await callback.message.edit_text(f"⭐ Siz xizmatni baholadingiz: {rating}/10")
 
     if rating >= 5:
         if order_id:
             await create_feedback(order_id, db_user["id"], rating)
         await state.clear()
-        await callback.message.answer("Thank you for your feedback!")
+        await callback.message.answer("🙏 Fikr-mulohazangiz uchun rahmat!")
     else:
         await state.set_state(ClientFeedback.waiting_for_category)
         await callback.message.answer(
-            "We are sorry to hear that. What was the main issue?",
+            "😔 Kechirasiz. Asosiy muammo nima edi?",
             reply_markup=get_feedback_category_keyboard(),
         )
     await callback.answer()
@@ -321,15 +321,15 @@ async def feedback_category_callback(
         if order_id:
             await create_feedback(order_id, db_user["id"], rating)
         await state.clear()
-        await callback.message.edit_text("Thank you for your feedback.")
+        await callback.message.edit_text("🙏 Fikr-mulohazangiz uchun rahmat.")
         await callback.answer()
         return
 
     await state.update_data(feedback_category=label)
-    await callback.message.edit_text(f"Category: {label}")
+    await callback.message.edit_text(f"📝 Kategoriya: {label}")
     await state.set_state(ClientFeedback.waiting_for_comment)
     await callback.message.answer(
-        "Would you like to add a comment? Type it below or tap Skip.",
+        "💬 Izoh qo'shmoqchimisiz? Quyida yozing yoki O'tkazib yuborish tugmasini bosing.",
         reply_markup=get_comment_skip_inline(),
     )
     await callback.answer()
@@ -351,7 +351,7 @@ async def feedback_comment_handler(message: Message, state: FSMContext, db_user:
         await create_feedback(order_id, db_user["id"], rating, category, message.text)
     await state.clear()
     await message.answer(
-        "Thank you! Your feedback has been saved.",
+        "✅ Rahmat! Fikr-mulohazangiz saqlandi.",
         reply_markup=get_main_keyboard("client"),
     )
 
@@ -373,5 +373,5 @@ async def feedback_comment_skip_callback(
     if order_id:
         await create_feedback(order_id, db_user["id"], rating, category)
     await state.clear()
-    await callback.message.edit_text("Thank you for your feedback.")
+    await callback.message.edit_text("🙏 Fikr-mulohazangiz uchun rahmat.")
     await callback.answer()
