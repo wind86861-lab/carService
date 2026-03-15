@@ -5,8 +5,6 @@ from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from bot.filters import RoleFilter
-
 from bot.config import WEB_URL
 from bot.database.models import get_dashboard_stats
 from bot.keyboards.inline import get_broadcast_confirm_keyboard, get_broadcast_target_keyboard
@@ -16,8 +14,6 @@ from bot.utils.formatters import format_money
 logger = logging.getLogger(__name__)
 
 router = Router()
-router.message.filter(RoleFilter("admin"))
-router.callback_query.filter(RoleFilter("admin"))
 
 
 @router.message(F.text == "📊 Boshqaruv paneli")

@@ -4,8 +4,6 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.fsm.context import FSMContext
 
-from bot.filters import RoleFilter
-
 from bot.states import ClientLinkOrder, ClientFeedback
 from bot.keyboards.reply import get_main_keyboard, get_cancel_keyboard
 from bot.keyboards.inline import (
@@ -40,8 +38,11 @@ from bot.utils.notifications import (
 logger = logging.getLogger(__name__)
 
 router = Router()
-router.message.filter(RoleFilter("client"))
-router.callback_query.filter(RoleFilter("client"))
+
+
+async def _is_client(message: Message, db_user: dict) -> bool:
+    return isinstance(db_user, dict) and db_user.get("role") == "client"
+
 
 PAGE_SIZE = 5
 
@@ -129,7 +130,7 @@ async def client_status_handler(message: Message, db_user: dict):
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "📋 Mening buyurtmalarim")
+@router.message(F.text == "📋 Mening buyurtmalarim", _is_client)
 async def client_my_orders_handler(message: Message, db_user: dict):
     orders = await get_orders_by_client(db_user["id"])
     if not orders:

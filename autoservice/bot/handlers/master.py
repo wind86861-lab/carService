@@ -3,12 +3,13 @@ from aiogram.types import Message
 
 from bot.config import BOT_USERNAME, WEB_URL
 from bot.database.models import get_financial_summary_by_master, get_orders_by_master
-from bot.filters import RoleFilter
 from bot.utils.formatters import format_money, format_order_status
 
 router = Router()
-router.message.filter(RoleFilter("master"))
-router.callback_query.filter(RoleFilter("master"))
+
+
+async def _is_master(message: Message, db_user: dict) -> bool:
+    return isinstance(db_user, dict) and db_user.get("role") == "master"
 
 
 @router.message(F.text == "🆕 Yangi buyurtma")
@@ -21,7 +22,7 @@ async def master_new_order_handler(message: Message, db_user: dict):
     )
 
 
-@router.message(F.text == "📋 Mening buyurtmalarim")
+@router.message(F.text == "📋 Mening buyurtmalarim", _is_master)
 async def master_my_orders_handler(message: Message, db_user: dict):
     active_statuses = ["new", "preparation", "in_process", "ready"]
     orders = await get_orders_by_master(db_user["id"])
