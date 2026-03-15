@@ -40,5 +40,6 @@ class AuthMiddleware(BaseMiddleware):
             await update_user_role(tg_user.id, "admin")
             db_user = await get_user_by_telegram_id(tg_user.id)
 
-        data["db_user"] = db_user
+        # Convert SQLAlchemy RowMapping to plain dict so MagicData filters work
+        data["db_user"] = dict(db_user)
         return await handler(event, data)
