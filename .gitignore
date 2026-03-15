@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+!.env.example
+*.log
+uploads/
+nginx/certs/*.pem
+node_modules/
+dist/
+.vite/
+*.DS_Store
+.pytest_cache/
+.coverage
+htmlcov/

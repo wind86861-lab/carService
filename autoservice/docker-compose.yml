@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: autoservice
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build:
+      context: .
+      dockerfile: autoservice/docker/Dockerfile.bot
+    env_file: autoservice/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres/autoservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/uploads
+
+  web:
+    build:
+      context: .
+      dockerfile: autoservice/docker/Dockerfile.web
+    env_file: autoservice/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@postgres/autoservice
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: autoservice/docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: ${WEB_URL}
+        VITE_BOT_USERNAME: ${BOT_USERNAME}
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./autoservice/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./autoservice/nginx/certs:/etc/nginx/certs:ro
+      - uploads:/app/uploads:ro
+    depends_on:
+      - web
+      - frontend
+
+volumes:
+  postgres_data:
+  uploads:
