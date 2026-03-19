@@ -692,7 +692,7 @@ async def get_financial_summary_by_master(master_id: int, from_date, to_date):
                 "COALESCE(SUM(master_share), 0) AS total_master_share "
                 "FROM orders "
                 "WHERE master_id = :mid AND status = 'closed' "
-                "AND closed_at >= :from_date AND closed_at <= :to_date"
+                "AND closed_at >= CAST(:from_date AS timestamp) AND closed_at <= CAST(:to_date AS timestamp)"
             ),
             {"mid": master_id, "from_date": from_date, "to_date": to_date},
         )
