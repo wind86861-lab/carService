@@ -32,6 +32,9 @@ export const getAdminMasterProfile = (id, dateFrom, dateTo) =>
 export const setUserRole = (id, role) =>
   api.patch(`/admin/masters/${id}/${role === 'master' ? 'promote' : 'demote'}`).then(r => r.data)
 
+export const promoteToMaster = (id) =>
+  api.patch(`/admin/masters/${id}/promote`).then(r => r.data)
+
 export const getAdminFinancials = (filters = {}) =>
   api.get('/admin/financials', { params: filters }).then(r => r.data)
 

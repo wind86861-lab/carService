@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import StatusBadge from '../../components/StatusBadge'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import { getAdminClientProfile, blockUser, unblockUser } from '../../api/admin'
-import { ArrowLeft, Ban, CheckCircle } from 'lucide-react'
+import { getAdminClientProfile, blockUser, unblockUser, promoteToMaster } from '../../api/admin'
+import { ArrowLeft, Ban, CheckCircle, UserPlus } from 'lucide-react'
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') + ' UZS' }
 function fmtDate(d) {
@@ -34,10 +34,16 @@ export default function AdminClientProfile() {
     setActionLoading(true)
     try {
       if (confirmAction.type === 'block') await blockUser(Number(id), 'clients')
-      else await unblockUser(Number(id), 'clients')
+      else if (confirmAction.type === 'unblock') await unblockUser(Number(id), 'clients')
+      else if (confirmAction.type === 'promote') {
+        const result = await promoteToMaster(Number(id))
+        showToast(`Promoted to master! ${result.password_generated ? 'Credentials sent via Telegram.' : ''}`)
+      }
       setConfirmAction(null)
       reload()
-      showToast(confirmAction.type === 'block' ? 'User blocked.' : 'User unblocked.')
+      if (confirmAction.type !== 'promote') {
+        showToast(confirmAction.type === 'block' ? 'User blocked.' : 'User unblocked.')
+      }
     } catch (e) {
       showToast(e.response?.data?.detail || 'Action failed')
     } finally { setActionLoading(false) }
@@ -69,7 +75,13 @@ export default function AdminClientProfile() {
               <span className="text-gray-500">Registered</span><span>{fmtDate(user.registered_at)}</span>
               <span className="text-gray-500">Total Orders</span><span>{orders.length}</span>
             </div>
-            <div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmAction({ type: 'promote' })}
+                className="btn-primary"
+              >
+                <UserPlus size={14} /> Promote to Master
+              </button>
               {user.is_active
                 ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger"><Ban size={14} /> Block</button>
                 : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success"><CheckCircle size={14} /> Unblock</button>
@@ -81,9 +93,8 @@ export default function AdminClientProfile() {
         <div className="flex gap-2 border-b border-gray-100 pb-0">
           {['orders', 'feedbacks'].map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-                tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >{t} ({t === 'orders' ? orders.length : feedbacks.length})</button>
           ))}
         </div>
@@ -142,9 +153,19 @@ export default function AdminClientProfile() {
 
       {confirmAction && (
         <ConfirmDialog
-          title={confirmAction.type === 'block' ? 'Block Client' : 'Unblock Client'}
-          message={`Are you sure you want to ${confirmAction.type} ${user.full_name}?`}
-          confirmLabel={confirmAction.type === 'block' ? 'Block' : 'Unblock'}
+          title={
+            confirmAction.type === 'promote' ? 'Promote to Master' :
+              confirmAction.type === 'block' ? 'Block Client' : 'Unblock Client'
+          }
+          message={
+            confirmAction.type === 'promote'
+              ? `Promote ${user.full_name} to master? Auto-generated credentials will be sent via Telegram.`
+              : `Are you sure you want to ${confirmAction.type} ${user.full_name}?`
+          }
+          confirmLabel={
+            confirmAction.type === 'promote' ? 'Promote' :
+              confirmAction.type === 'block' ? 'Block' : 'Unblock'
+          }
           onClose={() => setConfirmAction(null)}
           onConfirm={handleAction}
           loading={actionLoading}
