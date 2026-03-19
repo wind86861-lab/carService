@@ -60,3 +60,17 @@ async def require_admin(user=Depends(get_current_user)):
     if user["role"] != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return user
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    import bcrypt
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its bcrypt hash."""
+    if not hashed_password:
+        return False
+    import bcrypt
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())

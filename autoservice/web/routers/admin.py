@@ -1,5 +1,10 @@
 import io
+import secrets
+import string
+from datetime import date
 from typing import Optional
+
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
@@ -155,7 +160,9 @@ async def admin_get_master(
     date_to: Optional[str] = None,
     _admin=Depends(require_admin),
 ):
-    profile = await get_master_profile(master_id, date_from, date_to)
+    df = date.fromisoformat(date_from) if date_from else None
+    dt = date.fromisoformat(date_to) if date_to else None
+    profile = await get_master_profile(master_id, df, dt)
     if not profile:
         raise HTTPException(status_code=404, detail="Master not found")
     return profile
@@ -163,10 +170,59 @@ async def admin_get_master(
 
 @router.patch("/masters/{master_id}/promote")
 async def admin_promote(master_id: int, _admin=Depends(require_admin)):
+    import httpx
+    from sqlalchemy import text
+    from bot.database.connection import async_session
+    from web.auth import hash_password
+    from web.config import BOT_TOKEN
+
     result = await set_user_role(master_id, "master")
     if not result:
         raise HTTPException(status_code=404, detail="User not found")
-    return result
+
+    async with async_session() as session:
+        row = await session.execute(
+            text("SELECT id, full_name, telegram_id, username FROM users WHERE id = :id"),
+            {"id": master_id},
+        )
+        user = row.mappings().first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        username = user["username"]
+        password = None
+        if not username:
+            base = (user["full_name"] or "master").lower().replace(" ", "")[:10]
+            username = base + str(master_id)
+            password = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+            password_hash = hash_password(password)
+            await session.execute(
+                text("UPDATE users SET username = :u, password_hash = :p WHERE id = :id"),
+                {"u": username, "p": password_hash, "id": master_id},
+            )
+            await session.commit()
+
+        tg_id = user["telegram_id"]
+        if tg_id and password:
+            msg = (
+                "Tabriklaymiz! Siz usta sifatida tayinlandingiz.\n\n"
+                "Web panelga kirish:\n"
+                "http://155.212.139.74/login\n\n"
+                "Username: " + username + "\n"
+                "Password: " + password + "\n\n"
+                "Tizimga kirgach parolingizni ozgartiring."
+            )
+            try:
+                async with httpx.AsyncClient() as client:
+                    await client.post(
+                        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                        json={"chat_id": tg_id, "text": msg},
+                        timeout=5.0,
+                    )
+            except Exception:
+                pass
+
+        return {"username": username, "password_generated": password is not None, "role": "master"}
 
 
 @router.patch("/masters/{master_id}/demote")
@@ -193,6 +249,49 @@ async def admin_unblock_master(master_id: int, _admin=Depends(require_admin)):
     return result
 
 
+
+class CreateMasterSchema(BaseModel):
+    full_name: str
+    username: str
+    password: str
+    phone: str = None
+
+
+@router.post("/masters")
+async def admin_create_master(data: CreateMasterSchema, _admin=Depends(require_admin)):
+    from sqlalchemy import text
+    from bot.database.connection import async_session
+    from web.auth import hash_password
+    import time
+
+    async with async_session() as session:
+        existing = await session.execute(
+            text("SELECT id FROM users WHERE username = :u"),
+            {"u": data.username},
+        )
+        if existing.first():
+            raise HTTPException(status_code=400, detail="Username already taken")
+
+        password_hash = hash_password(data.password)
+        result = await session.execute(
+            text(
+                "INSERT INTO users (telegram_id, full_name, phone, role, username, password_hash, is_active) "
+                "VALUES (:tid, :name, :phone, 'master', :username, :hash, true) "
+                "RETURNING id, full_name, username, role"
+            ),
+            {
+                "tid": int(time.time() * 1000),
+                "name": data.full_name,
+                "phone": data.phone,
+                "username": data.username,
+                "hash": password_hash,
+            },
+        )
+        await session.commit()
+        row = result.first()
+        return {"id": row[0], "full_name": row[1], "username": row[2], "role": row[3]}
+
+
 # ---------------------------------------------------------------------------
 # Financials
 # ---------------------------------------------------------------------------
@@ -205,7 +304,9 @@ async def admin_financials(
     date_to: Optional[str] = None,
     _admin=Depends(require_admin),
 ):
-    return await get_financial_report(master_id, date_from, date_to)
+    df = date.fromisoformat(date_from) if date_from else None
+    dt = date.fromisoformat(date_to) if date_to else None
+    return await get_financial_report(master_id, df, dt)
 
 
 @router.get("/financials/export")

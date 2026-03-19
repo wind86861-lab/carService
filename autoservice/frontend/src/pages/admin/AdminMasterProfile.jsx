@@ -92,8 +92,9 @@ export default function AdminMasterProfile() {
           <div className="card">
             <div className="flex items-start justify-between">
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
+                <span className="text-gray-500">Username</span><span className="font-mono">{user.username || '—'}</span>
                 <span className="text-gray-500">Phone</span><span>{user.phone || '—'}</span>
-                <span className="text-gray-500">Telegram ID</span><span className="font-mono">{user.telegram_id}</span>
+                <span className="text-gray-500">Telegram ID</span><span className="font-mono">{user.telegram_id || '—'}</span>
               </div>
               <div className="flex gap-2">
                 {user.role === 'master' && (

@@ -985,12 +985,12 @@ async def get_all_masters(page: int = 1, page_size: int = 20) -> dict:
     offset = (page - 1) * page_size
     async with async_session() as session:
         count_result = await session.execute(
-            text("SELECT COUNT(*) FROM users WHERE role IN ('master','admin')")
+            text("SELECT COUNT(*) FROM users WHERE role = 'master'")
         )
         total = count_result.scalar()
         rows = await session.execute(
             text(
-                "SELECT u.id, u.full_name, u.phone, u.telegram_id, u.role, u.is_active, "
+                "SELECT u.id, u.full_name, u.phone, u.telegram_id, u.role, u.is_active, u.username, "
                 "COALESCE(s.active_orders, 0) AS active_orders, "
                 "COALESCE(s.closed_orders, 0) AS closed_orders, "
                 "COALESCE(s.total_earned, 0) AS total_earned, "
@@ -1008,7 +1008,7 @@ async def get_all_masters(page: int = 1, page_size: int = 20) -> dict:
                 "  FROM feedbacks f JOIN orders o ON o.id = f.order_id "
                 "  GROUP BY o.master_id"
                 ") r ON r.master_id = u.id "
-                "WHERE u.role IN ('master','admin') "
+                "WHERE u.role = 'master' "
                 "ORDER BY u.full_name "
                 "LIMIT :limit OFFSET :offset"
             ),
