@@ -1,37 +1,37 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../App'
-import { authTelegram } from '../api/client'
+import axios from 'axios'
 
 export default function Login() {
-  const { login, token } = useAuth()
+  const { login, token, role } = useAuth()
   const navigate = useNavigate()
-  const widgetRef = useRef(null)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (token) { navigate('/dashboard'); return }
-
-    window.onTelegramAuth = async (user) => {
-      try {
-        const data = await authTelegram(user)
-        login(data.access_token, data.role)
-        navigate('/dashboard')
-      } catch (e) {
-        alert('Authentication failed. Make sure your Telegram account is registered with the bot.')
-      }
+    if (token) {
+      navigate(role === 'admin' ? '/admin' : '/dashboard')
     }
+  }, [token, role, navigate])
 
-    const script = document.createElement('script')
-    script.src = 'https://telegram.org/js/telegram-widget.js?22'
-    script.setAttribute('data-telegram-login', import.meta.env.VITE_BOT_USERNAME || 'your_bot')
-    script.setAttribute('data-size', 'large')
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)')
-    script.setAttribute('data-request-access', 'write')
-    script.async = true
-    if (widgetRef.current) widgetRef.current.appendChild(script)
-
-    return () => { delete window.onTelegramAuth }
-  }, [token])
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const res = await axios.post('/api/auth/login', { username, password })
+      const userRole = res.data.role
+      login(res.data.access_token, userRole)
+      navigate(userRole === 'admin' ? '/admin' : '/dashboard')
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Invalid username or password')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
@@ -43,11 +43,52 @@ export default function Login() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">AutoService</h1>
-          <p className="text-gray-500 mt-1">Master Panel — sign in with Telegram</p>
+          <p className="text-gray-500 mt-1">Admin & Master Login</p>
         </div>
-        <div className="flex justify-center" ref={widgetRef} />
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your username"
+              required
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+
         <p className="text-center text-xs text-gray-400 mt-6">
-          Only registered masters can access this panel.
+          Only registered admins and masters can access this panel.
         </p>
       </div>
     </div>
