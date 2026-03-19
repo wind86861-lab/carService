@@ -135,6 +135,14 @@ async def close_order_endpoint(
         raise HTTPException(status_code=404, detail="Order not found")
     if order["status"] == "closed":
         raise HTTPException(status_code=400, detail="Order is already closed")
+    
+    # Masters can only mark order as ready with financials, not fully close it
+    # Client must confirm receipt via Telegram before order is truly closed
+    if order["status"] != "ready":
+        raise HTTPException(
+            status_code=400, 
+            detail="Order must be in 'ready' status before closing. Change status to 'ready' first."
+        )
 
     agreed = Decimal(str(order["agreed_price"]))
     try:
@@ -163,6 +171,8 @@ async def close_order_endpoint(
         "profit": float(financials.profit),
         "master_share": float(financials.master_share),
         "service_share": float(financials.service_share),
+        "status": "closed",
+        "note": "Order closed. Waiting for client confirmation via Telegram.",
     }
 
 
