@@ -10,7 +10,7 @@ router = APIRouter(tags=["financials"])
 
 
 def _parse_period(period: str, from_date: Optional[str], to_date: Optional[str]):
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     if period == "today":
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end = now
@@ -21,8 +21,8 @@ def _parse_period(period: str, from_date: Optional[str], to_date: Optional[str])
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end = now
     elif period == "custom" and from_date and to_date:
-        start = datetime.fromisoformat(from_date).replace(tzinfo=timezone.utc)
-        end = datetime.fromisoformat(to_date).replace(tzinfo=timezone.utc)
+        start = datetime.fromisoformat(from_date).replace(hour=0, minute=0, second=0, microsecond=0)
+        end = datetime.fromisoformat(to_date).replace(hour=23, minute=59, second=59, microsecond=999999)
     else:
         start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         end = now

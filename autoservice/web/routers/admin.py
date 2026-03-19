@@ -1,7 +1,7 @@
 import io
 import secrets
 import string
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -160,8 +160,8 @@ async def admin_get_master(
     date_to: Optional[str] = None,
     _admin=Depends(require_admin),
 ):
-    df = datetime.fromisoformat(date_from).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc) if date_from else None
-    dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc) if date_to else None
+    df = datetime.fromisoformat(date_from).replace(hour=0, minute=0, second=0, microsecond=0) if date_from else None
+    dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999) if date_to else None
     profile = await get_master_profile(master_id, df, dt)
     if not profile:
         raise HTTPException(status_code=404, detail="Master not found")
@@ -304,8 +304,8 @@ async def admin_financials(
     date_to: Optional[str] = None,
     _admin=Depends(require_admin),
 ):
-    df = datetime.fromisoformat(date_from).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc) if date_from else None
-    dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc) if date_to else None
+    df = datetime.fromisoformat(date_from).replace(hour=0, minute=0, second=0, microsecond=0) if date_from else None
+    dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999) if date_to else None
     return await get_financial_report(master_id, df, dt)
 
 
@@ -317,8 +317,8 @@ async def admin_financials_export(
     export_format: str = Query("xlsx", pattern="^(xlsx|pdf)$"),
     _admin=Depends(require_admin),
 ):
-    df = datetime.fromisoformat(date_from).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc) if date_from else None
-    dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc) if date_to else None
+    df = datetime.fromisoformat(date_from).replace(hour=0, minute=0, second=0, microsecond=0) if date_from else None
+    dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, microsecond=999999) if date_to else None
     report = await get_financial_report(master_id, df, dt)
     orders = [dict(o) for o in report["orders"]]
     summary = report["summary"]
