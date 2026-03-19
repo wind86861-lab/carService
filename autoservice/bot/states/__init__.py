@@ -19,3 +19,16 @@ class AdminBroadcast(StatesGroup):
     waiting_for_target = State()
     waiting_for_message = State()
     waiting_for_confirm = State()
+
+
+class AdminSearch(StatesGroup):
+    waiting_for_order = State()
+    waiting_for_client = State()
+    waiting_for_plate = State()
+
+
+class AdminCreateMaster(StatesGroup):
+    waiting_for_full_name = State()
+    waiting_for_username = State()
+    waiting_for_password = State()
+    waiting_for_phone = State()

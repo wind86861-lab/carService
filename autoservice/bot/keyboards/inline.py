@@ -105,3 +105,63 @@ def get_load_more_keyboard(offset: int) -> InlineKeyboardMarkup:
             [InlineKeyboardButton(text="Load more", callback_data=f"orders_page:{offset}")]
         ]
     )
+
+
+def get_admin_order_keyboard(order_number: str, status: str) -> InlineKeyboardMarkup:
+    """Return admin inline keyboard for an order."""
+    buttons = []
+    if status not in ("closed",):
+        buttons.append([InlineKeyboardButton(text="🔒 Majburiy yopish", callback_data=f"adm_force_close:{order_number}")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
+
+
+def get_admin_user_keyboard(user_id: int, role: str, is_active: bool) -> InlineKeyboardMarkup:
+    """Return admin inline keyboard for a user (client or master)."""
+    buttons = []
+    if role == "client":
+        buttons.append([InlineKeyboardButton(text="⬆️ Ustaga ko'tarish", callback_data=f"adm_promote:{user_id}")])
+    if role == "master":
+        buttons.append([InlineKeyboardButton(text="⬇️ Mijozga tushirish", callback_data=f"adm_demote:{user_id}")])
+    if is_active:
+        buttons.append([InlineKeyboardButton(text="🚫 Bloklash", callback_data=f"adm_block:{user_id}")])
+    else:
+        buttons.append([InlineKeyboardButton(text="✅ Blokdan chiqarish", callback_data=f"adm_unblock:{user_id}")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_admin_confirm_keyboard(action: str, target_id: str) -> InlineKeyboardMarkup:
+    """Return confirm/cancel keyboard for admin actions."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="✅ Ha", callback_data=f"adm_confirm:{action}:{target_id}"),
+                InlineKeyboardButton(text="❌ Yo'q", callback_data="adm_cancel"),
+            ]
+        ]
+    )
+
+
+def get_admin_period_keyboard() -> InlineKeyboardMarkup:
+    """Return period selector for financials."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Bugun", callback_data="adm_period:today"),
+             InlineKeyboardButton(text="Hafta", callback_data="adm_period:week")],
+            [InlineKeyboardButton(text="Oy", callback_data="adm_period:month"),
+             InlineKeyboardButton(text="Yil", callback_data="adm_period:year")],
+        ]
+    )
+
+
+def get_admin_page_keyboard(page: int, total_pages: int, entity: str) -> InlineKeyboardMarkup:
+    """Return pagination keyboard for admin lists."""
+    buttons = []
+    row = []
+    if page > 1:
+        row.append(InlineKeyboardButton(text="⬅️", callback_data=f"adm_page:{entity}:{page - 1}"))
+    row.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="noop"))
+    if page < total_pages:
+        row.append(InlineKeyboardButton(text="➡️", callback_data=f"adm_page:{entity}:{page + 1}"))
+    if row:
+        buttons.append(row)
+    return InlineKeyboardMarkup(inline_keyboard=buttons)

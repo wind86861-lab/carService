@@ -12,7 +12,8 @@ def get_main_keyboard(role: str) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="📊 Boshqaruv paneli"), KeyboardButton(text="📋 Barcha buyurtmalar")],
             [KeyboardButton(text="👥 Mijozlar"), KeyboardButton(text="🔧 Ustalar")],
-            [KeyboardButton(text="📢 Xabar yuborish")],
+            [KeyboardButton(text="� Moliya"), KeyboardButton(text="🚗 Mashina tarixi")],
+            [KeyboardButton(text="➕ Yangi usta"), KeyboardButton(text="�📢 Xabar yuborish")],
         ]
     else:
         # client (default)
