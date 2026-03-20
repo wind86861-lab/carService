@@ -12,6 +12,7 @@ from bot.database.models import (
     create_order,
     create_order_expense,
     get_financial_summary_by_master,
+    get_master_total_earnings,
     get_next_order_number,
     get_order_by_number,
     get_order_detail,
@@ -36,7 +37,16 @@ router = Router()
 
 _PAGE = 8
 _ACTIVE = ["new", "preparation", "in_process", "ready"]
-_MASTER_SHARE_RATIO = 0.7   # 70 % of profit to master
+
+
+async def _master_share_ratio(master_id: int) -> float:
+    """Dynamic master share: 40% base, +5% if >10M total, +10% if >15M total."""
+    total = await get_master_total_earnings(master_id)
+    if total >= 15_000_000:
+        return 0.50
+    if total >= 10_000_000:
+        return 0.45
+    return 0.40
 
 
 # ---------------------------------------------------------------------------
@@ -396,6 +406,30 @@ async def master_orders_back_callback(callback: CallbackQuery, db_user: dict):
 
 
 # ---------------------------------------------------------------------------
+# Closed Orders History
+# ---------------------------------------------------------------------------
+
+@router.message(F.text == "📁 Yopilgan buyurtmalar")
+async def master_closed_orders_handler(message: Message, db_user: dict):
+    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
+        return
+    all_orders = await get_orders_by_master(db_user["id"])
+    closed = [o for o in (all_orders or []) if o["status"] == "closed"]
+    if not closed:
+        await message.answer("📁 <b>Yopilgan buyurtmalar yo'q.</b>", parse_mode="HTML")
+        return
+    lines = []
+    for o in closed[:20]:
+        car = f"{o.get('brand','') or ''} {o.get('model','') or ''}".strip() or "—"
+        lines.append(
+            f"<b>{o['order_number']}</b> | {car} | {o.get('plate','—')} | "
+            f"{format_money(o.get('agreed_price',0))} | {format_datetime(o.get('created_at'))}"
+        )
+    header = f"📁 <b>Yopilgan buyurtmalar</b> ({len(closed)} ta)\n\n"
+    await message.answer(header + "\n".join(lines), parse_mode="HTML")
+
+
+# ---------------------------------------------------------------------------
 # Order detail view
 # ---------------------------------------------------------------------------
 
@@ -472,7 +506,8 @@ async def master_status_change_callback(callback: CallbackQuery, db_user: dict):
             if client_id:
                 client = await get_user_by_id(client_id)
                 if client and client.get("telegram_id"):
-                    notify_client_receipt_request(client["telegram_id"], order_number)
+                    client_lang = client.get("language") or "uz"
+                    notify_client_receipt_request(client["telegram_id"], order_number, lang=client_lang)
         except Exception:
             logger.warning("Failed to notify client for order %s", order_number)
 
@@ -513,7 +548,7 @@ async def master_close_order_start(callback: CallbackQuery, db_user: dict, state
 
 
 @router.message(MasterCloseOrder.waiting_for_parts_cost)
-async def master_close_parts_cost(message: Message, state: FSMContext):
+async def master_close_parts_cost(message: Message, state: FSMContext, db_user: dict):
     if _cancel_check(message.text):
         await _cancel(message, state); return
     parts_cost = _parse_amount(message.text)
@@ -523,8 +558,11 @@ async def master_close_parts_cost(message: Message, state: FSMContext):
     data = await state.get_data()
     agreed = data.get("close_agreed_price", 0) or 0
     profit = max(0, agreed - parts_cost)
-    master_share = int(profit * _MASTER_SHARE_RATIO)
+    ratio = await _master_share_ratio(db_user["id"])
+    master_share = int(profit * ratio)
     service_share = profit - master_share
+    master_pct = int(ratio * 100)
+    service_pct = 100 - master_pct
 
     await state.update_data(
         close_parts_cost=parts_cost,
@@ -538,8 +576,8 @@ async def master_close_parts_cost(message: Message, state: FSMContext):
         f"Kelishilgan narx:   <b>{agreed:,} so'm</b>\n"
         f"Ehtiyot qismlar:    <b>{parts_cost:,} so'm</b>\n"
         f"Foyda:              <b>{profit:,} so'm</b>\n"
-        f"Sizning ulushingiz: <b>{master_share:,} so'm</b> (70%)\n"
-        f"Xizmat ulushi:      <b>{service_share:,} so'm</b> (30%)\n\n"
+        f"Sizning ulushingiz: <b>{master_share:,} so'm</b> ({master_pct}%)\n"
+        f"Xizmat ulushi:      <b>{service_share:,} so'm</b> ({service_pct}%)\n\n"
         "Tasdiqlash uchun <b>Ha</b>, qayta kiritish uchun <b>Yo'q</b>."
     )
     await message.answer(report, parse_mode="HTML")

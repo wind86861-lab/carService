@@ -126,6 +126,7 @@ RUN_MIGRATIONS_SQL = [
         );
     """),
     text("CREATE INDEX IF NOT EXISTS idx_expenses_order_id ON order_expenses(order_id);"),
+    text("ALTER TABLE users ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'uz';"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -170,6 +171,16 @@ async def update_user_role(telegram_id: int, role: str):
         await session.commit()
 
 
+async def set_user_language(telegram_id: int, language: str):
+    """Persist the UI language preference for a user ('uz' or 'ru')."""
+    async with async_session() as session:
+        await session.execute(
+            text("UPDATE users SET language = :lang WHERE telegram_id = :tid"),
+            {"lang": language, "tid": telegram_id},
+        )
+        await session.commit()
+
+
 async def update_user_phone(telegram_id: int, phone: str):
     """Save the phone number for the given telegram_id."""
     async with async_session() as session:
@@ -178,6 +189,19 @@ async def update_user_phone(telegram_id: int, phone: str):
             {"phone": phone, "tid": telegram_id},
         )
         await session.commit()
+
+
+async def get_master_total_earnings(master_id: int) -> int:
+    """Return total agreed_price sum from all closed orders for a master (for bonus calc)."""
+    async with async_session() as session:
+        result = await session.execute(
+            text(
+                "SELECT COALESCE(SUM(agreed_price), 0) FROM orders "
+                "WHERE master_id = :mid AND status = 'closed'"
+            ),
+            {"mid": master_id},
+        )
+        return int(result.scalar_one())
 
 
 async def get_all_users():

@@ -32,47 +32,50 @@ def format_datetime(dt) -> str:
     return dt.strftime("%d.%m.%Y %H:%M")
 
 
-def format_order_status(status: str) -> str:
+def format_order_status(status: str, lang: str = "uz") -> str:
     """Map a status string to a human-readable label with emoji."""
-    mapping = {
-        "new": "🆕 New",
-        "preparation": "🔧 Preparation",
-        "in_process": "⚙️ In Process",
-        "ready": "✅ Ready",
-        "closed": "🏁 Closed",
-    }
-    return mapping.get(status, status)
+    from bot.i18n import t
+    key = f"status_{status}"
+    result = t(key, lang)
+    return result if result != key else status
 
 
-def build_order_card(order: dict, car: dict) -> str:
+def build_order_card(order: dict, car: dict, lang: str = "uz", expenses: list = None) -> str:
     """Build a formatted multi-line order status card for the client. Uses HTML parse mode."""
+    from bot.i18n import t
     car_brand = car["brand"] if car and car["brand"] else "—"
     car_model = car["model"] if car and car["model"] else ""
-    car_name = f"{car_brand} {car_model}".strip()
+    car_name = f"{car_brand} {car_model}".strip() or "—"
     plate = car["plate"] if car and car["plate"] else "—"
 
-    lines = [
-        f"<b>Order: {order['order_number']}</b>",
-        "──────────────────────",
-        f"Car:     {car_name}",
-        f"Plate:   {plate}",
-        "──────────────────────",
-        f"Problem:   {order['problem'] or '—'}",
-        f"Work:      {order['work_desc'] or '—'}",
-        "──────────────────────",
-        f"Status:    {format_order_status(order['status'])}",
-        f"Price:     {format_money(order['agreed_price'])}",
-        f"Paid:      {format_money(order['paid_amount'])}",
-        f"Created:   {format_datetime(order['created_at'])}",
-    ]
-    return "\n".join(lines)
+    card = t(
+        "order_card", lang,
+        order_number=order["order_number"],
+        car_name=car_name,
+        plate=plate,
+        problem=order.get("problem") or "—",
+        work_desc=order.get("work_desc") or "—",
+        status=format_order_status(order["status"], lang),
+        price=format_money(order.get("agreed_price")),
+        paid=format_money(order.get("paid_amount")),
+        date=format_datetime(order.get("created_at")),
+    )
+
+    if expenses:
+        lines = "\n".join(
+            f"  • {e['item_name']}: {format_money(e['amount'])}" for e in expenses
+        )
+        card += t("order_card_expenses", lang, expenses=lines)
+
+    return card
 
 
-def build_order_summary(order: dict, car: dict) -> str:
+def build_order_summary(order: dict, car: dict, lang: str = "uz") -> str:
     """Build a short one-line summary for order lists."""
+    from bot.i18n import t
     car_brand = car["brand"] if car and car["brand"] else "—"
     car_model = car["model"] if car and car["model"] else ""
-    car_name = f"{car_brand} {car_model}".strip()
-    status = format_order_status(order["status"])
-    date = format_datetime(order["created_at"])
-    return f"<b>{order['order_number']}</b> | {car_name} | {status} | {date}"
+    car_name = f"{car_brand} {car_model}".strip() or "—"
+    status = format_order_status(order["status"], lang)
+    date = format_datetime(order.get("created_at"))
+    return t("order_summary", lang, order_number=order["order_number"], car_name=car_name, status=status, date=date)

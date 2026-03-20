@@ -4,15 +4,18 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.fsm.context import FSMContext
 
+from bot.i18n import t, lang_of
 from bot.states import ClientLinkOrder, ClientFeedback
 from bot.keyboards.reply import get_main_keyboard, get_cancel_keyboard
 from bot.keyboards.inline import (
     get_order_card_keyboard,
     get_feedback_category_keyboard,
+    get_positive_category_keyboard,
     get_comment_skip_inline,
     get_load_more_keyboard,
 )
 from bot.database.models import (
+    get_expenses_by_order,
     get_order_by_number,
     get_orders_by_client,
     link_client_to_order,
@@ -47,6 +50,22 @@ async def _is_client(message: Message, db_user: dict) -> bool:
 PAGE_SIZE = 5
 
 
+async def _build_card(order, db_user: dict):
+    """Build order card with expenses. Returns (text, keyboard)."""
+    lang = lang_of(db_user)
+    car = await get_car_by_order_number(order["order_number"])
+    expenses = None
+    try:
+        exp_rows = await get_expenses_by_order(order["id"])
+        if exp_rows:
+            expenses = [dict(e) for e in exp_rows]
+    except Exception:
+        pass
+    card = build_order_card(order, car, lang=lang, expenses=expenses)
+    kb = get_order_card_keyboard(order["order_number"], lang=lang)
+    return card, kb
+
+
 # ------------------------------------------------------------------
 # Link to Order flow
 # ------------------------------------------------------------------
@@ -54,44 +73,29 @@ PAGE_SIZE = 5
 
 @router.message(F.text == "🔗 Buyurtmaga bog'lanish")
 async def client_link_handler(message: Message, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     await state.set_state(ClientLinkOrder.waiting_for_order_number)
-    await message.answer(
-        "Buyurtma raqamingizni kiriting (masalan, A-00123):",
-        reply_markup=get_cancel_keyboard(),
-    )
+    await message.answer(t("enter_order_number", lang), reply_markup=get_cancel_keyboard())
 
 
 @router.message(ClientLinkOrder.waiting_for_order_number)
-async def client_order_number_handler(
-    message: Message, state: FSMContext, db_user: dict, bot: Bot
-):
-    if message.text and (message.text.strip().lower() == "cancel" or message.text.strip() == "❌ Bekor qilish"):
+async def client_order_number_handler(message: Message, state: FSMContext, db_user: dict, bot: Bot):
+    lang = lang_of(db_user)
+    if message.text and message.text.strip() == "❌ Bekor qilish":
         await state.clear()
-        await message.answer(
-            "❌ Bekor qilindi.", reply_markup=get_main_keyboard("client")
-        )
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("client"))
         return
-
     order_number = message.text.strip().upper() if message.text else ""
     order = await get_order_by_number(order_number)
     if not order:
-        await message.answer(
-            "❌ Buyurtma topilmadi. Iltimos, raqamni tekshirib, qayta urinib ko'ring."
-        )
+        await message.answer(t("order_not_found", lang))
         return
-
     await link_client_to_order(order_number, db_user["id"])
     await state.clear()
-
-    car = await get_car_by_order_number(order_number)
-    card = build_order_card(order, car)
-    await message.answer("✅ Mashinangiz muvaffaqiyatli bog'landi!")
-    await message.answer(
-        card,
-        parse_mode="HTML",
-        reply_markup=get_order_card_keyboard(order_number),
-    )
-    await message.answer("📱 Menyu:", reply_markup=get_main_keyboard("client"))
+    card, kb = await _build_card(order, db_user)
+    await message.answer(t("car_linked_ok", lang))
+    await message.answer(card, parse_mode="HTML", reply_markup=kb)
+    await message.answer("📱", reply_markup=get_main_keyboard("client"))
 
 
 # ------------------------------------------------------------------
@@ -101,28 +105,14 @@ async def client_order_number_handler(
 
 @router.message(F.text == "🚗 Mashina holati")
 async def client_status_handler(message: Message, db_user: dict):
+    lang = lang_of(db_user)
     orders = await get_orders_by_client(db_user["id"])
-    if not orders:
-        await message.answer(
-            "Sizda faol buyurtmalar yo'q. Iltimos, avval buyurtmaga bog'laning.",
-            reply_markup=get_main_keyboard("client"),
-        )
-        return
-    active = [o for o in orders if o["status"] not in ("closed", "cancelled")]
+    active = [o for o in (orders or []) if o["status"] not in ("closed", "cancelled")]
     if not active:
-        await message.answer(
-            "Hozirda faol buyurtmalaringiz yo'q.",
-            reply_markup=get_main_keyboard("client"),
-        )
+        await message.answer(t("no_active_orders", lang), reply_markup=get_main_keyboard("client"))
         return
-    order = active[0]
-    car = await get_car_by_order_number(order["order_number"])
-    card = build_order_card(order, car)
-    await message.answer(
-        card,
-        parse_mode="HTML",
-        reply_markup=get_order_card_keyboard(order["order_number"]),
-    )
+    card, kb = await _build_card(active[0], db_user)
+    await message.answer(card, parse_mode="HTML", reply_markup=kb)
 
 
 # ------------------------------------------------------------------
@@ -132,54 +122,40 @@ async def client_status_handler(message: Message, db_user: dict):
 
 @router.message(F.text == "📋 Mening buyurtmalarim", _is_client)
 async def client_my_orders_handler(message: Message, db_user: dict):
+    lang = lang_of(db_user)
     orders = await get_orders_by_client(db_user["id"])
     if not orders:
-        await message.answer(
-            "Sizda hali buyurtmalar yo'q.",
-            reply_markup=get_main_keyboard("client"),
-        )
+        await message.answer(t("no_orders", lang), reply_markup=get_main_keyboard("client"))
         return
-
     page = orders[:PAGE_SIZE]
     lines = []
     for order in page:
         car = await get_car_by_order_number(order["order_number"])
-        lines.append(build_order_summary(order, car))
-
+        lines.append(build_order_summary(order, car, lang=lang))
     text = "\n\n".join(lines)
     if len(orders) > PAGE_SIZE:
-        await message.answer(
-            text,
-            parse_mode="HTML",
-            reply_markup=get_load_more_keyboard(PAGE_SIZE),
-        )
+        await message.answer(text, parse_mode="HTML", reply_markup=get_load_more_keyboard(PAGE_SIZE))
     else:
         await message.answer(text, parse_mode="HTML")
 
 
 @router.callback_query(F.data.startswith("orders_page:"))
 async def orders_page_callback(callback: CallbackQuery, db_user: dict):
+    lang = lang_of(db_user)
     offset = int(callback.data.split(":")[1])
     orders = await get_orders_by_client(db_user["id"])
-    page = orders[offset : offset + PAGE_SIZE]
-
+    page = orders[offset: offset + PAGE_SIZE]
     if not page:
-        await callback.answer("Boshqa buyurtmalar yo'q.")
+        await callback.answer("—")
         return
-
     lines = []
     for order in page:
         car = await get_car_by_order_number(order["order_number"])
-        lines.append(build_order_summary(order, car))
-
+        lines.append(build_order_summary(order, car, lang=lang))
     text = "\n\n".join(lines)
     next_offset = offset + PAGE_SIZE
     if next_offset < len(orders):
-        await callback.message.answer(
-            text,
-            parse_mode="HTML",
-            reply_markup=get_load_more_keyboard(next_offset),
-        )
+        await callback.message.answer(text, parse_mode="HTML", reply_markup=get_load_more_keyboard(next_offset))
     else:
         await callback.message.answer(text, parse_mode="HTML")
     await callback.answer()
@@ -192,17 +168,15 @@ async def orders_page_callback(callback: CallbackQuery, db_user: dict):
 
 @router.callback_query(F.data.startswith("photos:"))
 async def view_photos_callback(callback: CallbackQuery, db_user: dict):
+    lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
     order = await get_order_by_number(order_number)
     if not order:
-        await callback.answer("❌ Buyurtma topilmadi.", show_alert=True)
-        return
-
+        await callback.answer("❌", show_alert=True); return
     photos = await get_photos_by_order(order["id"])
     if not photos:
-        await callback.answer("📷 Bu buyurtma uchun rasmlar yo'q.", show_alert=True)
-        return
-
+        msg = "📷 Rasmlar yo'q" if lang == "uz" else "📷 Фото нет"
+        await callback.answer(msg, show_alert=True); return
     media = [InputMediaPhoto(media=p["file_id"]) for p in photos]
     await callback.message.answer_media_group(media)
     await callback.answer()
@@ -215,30 +189,24 @@ async def view_photos_callback(callback: CallbackQuery, db_user: dict):
 
 @router.callback_query(F.data.startswith("confirm_receipt:"))
 async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
+    lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
-
     order = await get_order_by_number(order_number)
     if order and order["client_confirmed"]:
-        await callback.answer("✅ Siz allaqachon qabul qilganingizni tasdiqlagansiz.", show_alert=True)
-        return
-
+        await callback.answer(t("already_confirmed", lang), show_alert=True); return
     await confirm_client_receipt(order_number)
-
-    new_text = callback.message.text + "\n\n✅ Siz mashinani qabul qilganingizni tasdiqladingiz. Buyurtma yopildi."
+    new_text = (callback.message.text or "") + "\n\n" + t("confirm_receipt_done", lang)
     await callback.message.edit_text(new_text, reply_markup=None)
-
     order = await get_order_by_number(order_number)
     if order and order["master_id"]:
         master = await get_user_by_id(order["master_id"])
         if master:
-            notify_master_receipt_confirmed(master["telegram_id"], order_number)
-
+            master_lang = master.get("language") or "uz"
+            notify_master_receipt_confirmed(master["telegram_id"], order_number, lang=master_lang)
     if order:
         from aiogram import Dispatcher
         dp = Dispatcher.get_current()
-        await schedule_feedback_request(
-            bot, db_user["telegram_id"], order["id"], order_number, dp
-        )
+        await schedule_feedback_request(bot, db_user["telegram_id"], order["id"], order_number, dp)
     await callback.answer()
 
 
@@ -249,29 +217,21 @@ async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: 
 
 @router.callback_query(F.data.startswith("dispute:"))
 async def dispute_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
+    lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
-    new_text = callback.message.text + "\n\n⚠️ Biz ustani sizning muammo haqida xabardor qildik."
+    new_text = (callback.message.text or "") + "\n\n" + t("dispute_reported", lang)
     await callback.message.edit_text(new_text, reply_markup=None)
-
     order = await get_order_by_number(order_number)
     client_name = db_user["full_name"]
-    master_name = "Unknown"
-
-    await update_order_status(
-        order_number,
-        "ready",
-        note=f"Dispute raised by client {client_name}",
-        changed_by=db_user["id"],
-    )
-
+    master_name = "—"
+    await update_order_status(order_number, "ready",
+        note=f"Dispute raised by {client_name}", changed_by=db_user["id"])
     if order and order["master_id"]:
         master = await get_user_by_id(order["master_id"])
         if master:
             master_name = master["full_name"]
-            notify_master_dispute(
-                master["telegram_id"], order_number, client_name
-            )
-
+            master_lang = master.get("language") or "uz"
+            notify_master_dispute(master["telegram_id"], order_number, client_name, lang=master_lang)
     await notify_admin_dispute(order_number, client_name, master_name)
     await callback.answer()
 
@@ -282,59 +242,83 @@ async def dispute_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
 
 
 @router.callback_query(F.data.startswith("rating:"))
-async def feedback_rating_callback(
-    callback: CallbackQuery, state: FSMContext, db_user: dict
-):
+async def feedback_rating_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     rating = int(callback.data.split(":")[1])
     data = await state.get_data()
     order_id = data.get("feedback_order_id")
-
     await state.update_data(feedback_rating=rating)
-    await callback.message.edit_text(f"⭐ Siz xizmatni baholadingiz: {rating}/10")
-
-    if rating >= 5:
+    await callback.message.edit_text(t("feedback_rated", lang, rating=rating))
+    if rating > 5:
+        # Ask about positive aspects
+        await state.set_state(ClientFeedback.waiting_for_category)
+        await state.update_data(feedback_positive=True)
+        await callback.message.answer(
+            t("feedback_ask_positive", lang),
+            reply_markup=get_positive_category_keyboard(lang),
+        )
+    elif rating == 5:
         if order_id:
             await create_feedback(order_id, db_user["id"], rating)
         await state.clear()
-        await callback.message.answer("🙏 Fikr-mulohazangiz uchun rahmat!")
+        await callback.message.answer(t("feedback_thanks", lang))
     else:
         await state.set_state(ClientFeedback.waiting_for_category)
+        await state.update_data(feedback_positive=False)
         await callback.message.answer(
-            "😔 Kechirasiz. Asosiy muammo nima edi?",
-            reply_markup=get_feedback_category_keyboard(),
+            t("feedback_ask_negative", lang),
+            reply_markup=get_feedback_category_keyboard(lang),
         )
     await callback.answer()
 
 
 # ------------------------------------------------------------------
-# Feedback — category
+# Feedback — positive category (rating > 5)
 # ------------------------------------------------------------------
 
 
-@router.callback_query(F.data.startswith("category:"))
-async def feedback_category_callback(
-    callback: CallbackQuery, state: FSMContext, db_user: dict
-):
+@router.callback_query(F.data.startswith("pos_category:"))
+async def feedback_positive_category_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     label = callback.data.split(":", 1)[1]
     data = await state.get_data()
     order_id = data.get("feedback_order_id")
-    rating = data.get("feedback_rating", 1)
-
+    rating = data.get("feedback_rating", 6)
     if label == "skip":
         if order_id:
             await create_feedback(order_id, db_user["id"], rating)
         await state.clear()
-        await callback.message.edit_text("🙏 Fikr-mulohazangiz uchun rahmat.")
-        await callback.answer()
-        return
-
+        await callback.message.edit_text(t("feedback_thanks", lang))
+        await callback.answer(); return
     await state.update_data(feedback_category=label)
-    await callback.message.edit_text(f"📝 Kategoriya: {label}")
+    await callback.message.edit_text(f"✅ {label}")
     await state.set_state(ClientFeedback.waiting_for_comment)
-    await callback.message.answer(
-        "💬 Izoh qo'shmoqchimisiz? Quyida yozing yoki O'tkazib yuborish tugmasini bosing.",
-        reply_markup=get_comment_skip_inline(),
-    )
+    await callback.message.answer(t("feedback_ask_comment", lang), reply_markup=get_comment_skip_inline())
+    await callback.answer()
+
+
+# ------------------------------------------------------------------
+# Feedback — negative category (rating <= 4)
+# ------------------------------------------------------------------
+
+
+@router.callback_query(F.data.startswith("category:"))
+async def feedback_category_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
+    label = callback.data.split(":", 1)[1]
+    data = await state.get_data()
+    order_id = data.get("feedback_order_id")
+    rating = data.get("feedback_rating", 1)
+    if label == "skip":
+        if order_id:
+            await create_feedback(order_id, db_user["id"], rating)
+        await state.clear()
+        await callback.message.edit_text(t("feedback_thanks", lang))
+        await callback.answer(); return
+    await state.update_data(feedback_category=label)
+    await callback.message.edit_text(f"📝 {label}")
+    await state.set_state(ClientFeedback.waiting_for_comment)
+    await callback.message.answer(t("feedback_ask_comment", lang), reply_markup=get_comment_skip_inline())
     await callback.answer()
 
 
@@ -345,36 +329,31 @@ async def feedback_category_callback(
 
 @router.message(ClientFeedback.waiting_for_comment)
 async def feedback_comment_handler(message: Message, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     data = await state.get_data()
     order_id = data.get("feedback_order_id")
     rating = data.get("feedback_rating", 1)
     category = data.get("feedback_category")
-
     if order_id:
         await create_feedback(order_id, db_user["id"], rating, category, message.text)
     await state.clear()
-    await message.answer(
-        "✅ Rahmat! Fikr-mulohazangiz saqlandi.",
-        reply_markup=get_main_keyboard("client"),
-    )
+    await message.answer(t("feedback_saved", lang), reply_markup=get_main_keyboard("client"))
 
 
 # ------------------------------------------------------------------
-# Feedback — comment skip callback
+# Feedback — comment skip
 # ------------------------------------------------------------------
 
 
 @router.callback_query(F.data == "comment:skip")
-async def feedback_comment_skip_callback(
-    callback: CallbackQuery, state: FSMContext, db_user: dict
-):
+async def feedback_comment_skip_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     data = await state.get_data()
     order_id = data.get("feedback_order_id")
     rating = data.get("feedback_rating", 1)
     category = data.get("feedback_category")
-
     if order_id:
         await create_feedback(order_id, db_user["id"], rating, category)
     await state.clear()
-    await callback.message.edit_text("🙏 Fikr-mulohazangiz uchun rahmat.")
+    await callback.message.edit_text(t("feedback_thanks", lang))
     await callback.answer()

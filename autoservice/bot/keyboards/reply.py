@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def get_main_keyboard(role: str) -> ReplyKeyboardMarkup:
@@ -6,7 +6,7 @@ def get_main_keyboard(role: str) -> ReplyKeyboardMarkup:
     if role == "master":
         buttons = [
             [KeyboardButton(text="🆕 Yangi buyurtma"), KeyboardButton(text="📋 Mening buyurtmalarim")],
-            [KeyboardButton(text="📊 Statistika")],
+            [KeyboardButton(text="� Yopilgan buyurtmalar"), KeyboardButton(text="�📊 Statistika")],
         ]
     elif role == "admin":
         buttons = [
@@ -40,3 +40,11 @@ def get_cancel_keyboard() -> ReplyKeyboardMarkup:
         keyboard=[[KeyboardButton(text="❌ Bekor qilish")]],
         resize_keyboard=True,
     )
+
+
+def get_language_keyboard() -> InlineKeyboardMarkup:
+    """Return an inline keyboard for language selection."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🇺🇿 O'zbek", callback_data="set_lang:uz"),
+         InlineKeyboardButton(text="🇷🇺 Русский", callback_data="set_lang:ru")],
+    ])

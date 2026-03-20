@@ -10,28 +10,25 @@ def get_skip_inline() -> InlineKeyboardMarkup:
     )
 
 
-def get_order_card_keyboard(order_number: str) -> InlineKeyboardMarkup:
+def get_order_card_keyboard(order_number: str, lang: str = "uz") -> InlineKeyboardMarkup:
     """Return an inline keyboard with a 'View Photos' button."""
+    label = "📷 Rasmlar" if lang == "uz" else "📷 Фото"
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="View Photos", callback_data=f"photos:{order_number}")]
+            [InlineKeyboardButton(text=label, callback_data=f"photos:{order_number}")]
         ]
     )
 
 
-def get_confirmation_keyboard(order_number: str) -> InlineKeyboardMarkup:
+def get_confirmation_keyboard(order_number: str, lang: str = "uz") -> InlineKeyboardMarkup:
     """Return an inline keyboard with receipt confirmation / dispute buttons."""
+    yes = "✅ Ha, oldim" if lang == "uz" else "✅ Да, получил"
+    no = "⚠️ Yo'q, muammo bor" if lang == "uz" else "⚠️ Нет, есть проблема"
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(
-                    text="Yes, I received it",
-                    callback_data=f"confirm_receipt:{order_number}",
-                ),
-                InlineKeyboardButton(
-                    text="No, there is a problem",
-                    callback_data=f"dispute:{order_number}",
-                ),
+                InlineKeyboardButton(text=yes, callback_data=f"confirm_receipt:{order_number}"),
+                InlineKeyboardButton(text=no, callback_data=f"dispute:{order_number}"),
             ]
         ]
     )
@@ -53,16 +50,35 @@ def get_rating_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def get_feedback_category_keyboard() -> InlineKeyboardMarkup:
-    """Return an inline keyboard with feedback category options and a Skip button."""
-    categories = ["Communication", "Time", "Quality", "Price"]
-    buttons = [
-        [InlineKeyboardButton(text=cat, callback_data=f"category:{cat}")]
-        for cat in categories
-    ]
-    buttons.append(
-        [InlineKeyboardButton(text="Skip", callback_data="category:skip")]
-    )
+def get_feedback_category_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Return negative feedback category keyboard."""
+    if lang == "ru":
+        cats = [("💬 Общение", "communication"), ("⏱ Время", "time"),
+                ("🔧 Качество", "quality"), ("💰 Цена", "price"),
+                ("📝 Другое", "other")]
+        skip = "⏭ Пропустить"
+    else:
+        cats = [("💬 Muloqot", "communication"), ("⏱ Vaqt", "time"),
+                ("🔧 Sifat", "quality"), ("💰 Narx", "price"),
+                ("📝 Boshqa", "other")]
+        skip = "⏭ O'tkazib yuborish"
+    buttons = [[InlineKeyboardButton(text=label, callback_data=f"category:{key}")] for label, key in cats]
+    buttons.append([InlineKeyboardButton(text=skip, callback_data="category:skip")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_positive_category_keyboard(lang: str = "uz") -> InlineKeyboardMarkup:
+    """Return positive feedback category keyboard for rating > 5."""
+    if lang == "ru":
+        cats = [("✅ Качество", "pos_quality"), ("⚡ Скорость", "pos_speed"),
+                ("💰 Цена", "pos_price"), ("💬 Общение", "pos_communication")]
+        skip = "⏭ Пропустить"
+    else:
+        cats = [("✅ Sifat", "pos_quality"), ("⚡ Tezlik", "pos_speed"),
+                ("💰 Narx", "pos_price"), ("💬 Muloqot", "pos_communication")]
+        skip = "⏭ O'tkazib yuborish"
+    buttons = [[InlineKeyboardButton(text=label, callback_data=f"pos_category:{key}")] for label, key in cats]
+    buttons.append([InlineKeyboardButton(text=skip, callback_data="pos_category:skip")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
