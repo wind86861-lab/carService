@@ -202,7 +202,7 @@ def get_master_order_detail_keyboard(
     if current_status in _NEXT_STATUS:
         next_st, next_label = _NEXT_STATUS[current_status]
         buttons.append([InlineKeyboardButton(text=next_label, callback_data=f"mst_status:{order_number}:{next_st}")])
-    if current_status not in ("closed",):
+    if current_status not in ("closed", "ready"):
         buttons.append([InlineKeyboardButton(text="🔩 Qismlar narxini qo'shish", callback_data=f"mst_add_parts:{order_number}")])
     if current_status == "ready" and client_confirmed:
         buttons.append([InlineKeyboardButton(text="💰 Moliyaviy hisobotni yopish", callback_data=f"mst_close:{order_number}")])
