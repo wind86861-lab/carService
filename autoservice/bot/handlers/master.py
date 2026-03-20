@@ -17,13 +17,14 @@ from bot.database.models import (
     get_user_by_id,
     get_users_by_role,
     update_order_status,
+    update_parts_cost,
 )
 from bot.keyboards.inline import (
     get_master_order_detail_keyboard,
     get_master_order_list_keyboard,
 )
 from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
-from bot.states import MasterCloseOrder, MasterCreateOrder
+from bot.states import MasterCloseOrder, MasterCreateOrder, MasterUpdateParts
 from bot.utils.formatters import format_datetime, format_money, format_order_status
 from bot.utils.notifications import notify_client_receipt_request
 
@@ -590,6 +591,62 @@ async def master_close_confirm(message: Message, state: FSMContext, db_user: dic
     except Exception:
         logger.exception("Failed to close order %s", order_number)
         await message.answer("❌ Buyurtmani yopishda xato yuz berdi.", reply_markup=get_main_keyboard("master"))
+
+
+# ---------------------------------------------------------------------------
+# Add parts cost to active order
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data.startswith("mst_add_parts:"))
+async def master_add_parts_start(callback: CallbackQuery, db_user: dict, state: FSMContext):
+    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
+        await callback.answer("Ruxsat yo'q."); return
+    order_number = callback.data.split(":", 1)[1]
+    order = await get_order_detail(order_number)
+    if not order:
+        await callback.answer("Buyurtma topilmadi."); return
+    if order["status"] == "closed":
+        await callback.answer("Yopilgan buyurtmaga qo'shib bo'lmaydi."); return
+    current_parts = order.get("parts_cost") or 0
+    await state.update_data(parts_order_number=order_number)
+    await state.set_state(MasterUpdateParts.waiting_for_amount)
+    await callback.message.answer(
+        f"🔩 <b>{order_number}</b> — Qismlar narxi\n\n"
+        f"Hozirgi qismlar narxi: <b>{int(current_parts):,} so'm</b>\n\n"
+        "Qo'shmoqchi bo'lgan miqdorni kiriting (so'm):\n"
+        "(masalan: 50000)",
+        parse_mode="HTML",
+        reply_markup=get_cancel_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.message(MasterUpdateParts.waiting_for_amount)
+async def master_add_parts_amount(message: Message, state: FSMContext, db_user: dict):
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+    amount = _parse_amount(message.text)
+    if amount is None or amount <= 0:
+        await message.answer("❗ 0 dan katta raqam kiriting (masalan: 50000):")
+        return
+    data = await state.get_data()
+    order_number = data["parts_order_number"]
+    await state.clear()
+    try:
+        await update_parts_cost(order_number, amount, changed_by=db_user["id"])
+        order = dict(await get_order_detail(order_number))
+        new_total = int(order.get("parts_cost") or 0)
+        confirmed = bool(order.get("client_confirmed"))
+        await message.answer(
+            f"✅ <b>{order_number}</b> — qismlar narxi yangilandi!\n\n"
+            f"Qo'shilgan: <b>+{amount:,} so'm</b>\n"
+            f"Jami qismlar narxi: <b>{new_total:,} so'm</b>",
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard("master"),
+        )
+    except Exception:
+        logger.exception("Failed to update parts cost for %s", order_number)
+        await message.answer("❌ Xato yuz berdi.", reply_markup=get_main_keyboard("master"))
 
 
 # ---------------------------------------------------------------------------

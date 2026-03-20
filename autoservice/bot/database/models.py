@@ -656,6 +656,32 @@ async def add_payment(order_number: str, amount, changed_by: int | None = None):
                 )
 
 
+async def update_parts_cost(order_number: str, add_amount: int, changed_by: int | None = None):
+    """Add add_amount to parts_cost for the order and write a log entry."""
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(
+                text(
+                    "UPDATE orders SET parts_cost = COALESCE(parts_cost, 0) + :amt "
+                    "WHERE order_number = :num RETURNING id, parts_cost"
+                ),
+                {"amt": add_amount, "num": order_number},
+            )
+            row = result.first()
+            if row:
+                await session.execute(
+                    text(
+                        "INSERT INTO order_logs (order_id, status, note, changed_by) "
+                        "VALUES (:oid, 'parts_updated', :note, :by)"
+                    ),
+                    {
+                        "oid": row[0],
+                        "note": f"Parts cost updated: +{add_amount}, total={row[1]}",
+                        "by": changed_by,
+                    },
+                )
+
+
 # ---------------------------------------------------------------------------
 # Car history by plate
 # ---------------------------------------------------------------------------

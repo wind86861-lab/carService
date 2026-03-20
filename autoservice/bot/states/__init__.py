@@ -58,3 +58,7 @@ class MasterCreateOrder(StatesGroup):
 class MasterCloseOrder(StatesGroup):
     waiting_for_parts_cost = State()
     waiting_for_confirm = State()
+
+
+class MasterUpdateParts(StatesGroup):
+    waiting_for_amount = State()
