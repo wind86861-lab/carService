@@ -115,6 +115,95 @@ def get_admin_order_keyboard(order_number: str, status: str) -> InlineKeyboardMa
     return InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
 
+_STATUS_ICON = {
+    "new": "🆕", "preparation": "🔧", "in_process": "⚙️", "ready": "✅", "closed": "🔒",
+}
+
+
+def get_admin_orders_keyboard(orders: list, page: int, total_pages: int) -> InlineKeyboardMarkup:
+    """Paginated order list — each order is a clickable inline button."""
+    buttons = []
+    for o in orders:
+        icon = _STATUS_ICON.get(o.get("status", ""), "❓")
+        plate = o.get("plate") or "—"
+        client = (o.get("client_name") or "—")[:12]
+        label = f"{icon} {o['order_number']} | {plate} | {client}"
+        buttons.append([InlineKeyboardButton(text=label[:60], callback_data=f"adm_order_view:{o['order_number']}")])
+    nav = []
+    if page > 1:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"adm_orders_page:{page - 1}"))
+    nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="noop"))
+    if page < total_pages:
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"adm_orders_page:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+    buttons.append([InlineKeyboardButton(text="🔍 Qidirish", callback_data="adm_order_search")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_admin_order_detail_keyboard(order_number: str, status: str) -> InlineKeyboardMarkup:
+    """Order detail action buttons for admin."""
+    buttons = []
+    if status not in ("closed",):
+        buttons.append([InlineKeyboardButton(text="🔒 Majburiy yopish", callback_data=f"adm_force_close:{order_number}")])
+    buttons.append([InlineKeyboardButton(text="◀️ Orqaga", callback_data="adm_orders_back")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_clients_for_master_keyboard(clients: list, page: int, total_pages: int) -> InlineKeyboardMarkup:
+    """Client list for selecting who to promote to master."""
+    buttons = []
+    for c in clients:
+        icon = "✅" if c["is_active"] else "🚫"
+        label = f"{icon} {c['full_name']} | {c.get('phone') or '—'}"
+        buttons.append([InlineKeyboardButton(text=label[:60], callback_data=f"adm_pick_client:{c['id']}")])
+    nav = []
+    if page > 1:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"adm_nm_page:{page - 1}"))
+    nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="noop"))
+    if page < total_pages:
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"adm_nm_page:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+_NEXT_STATUS = {
+    "new": ("preparation", "🔧 Tayyorlashga olish"),
+    "preparation": ("in_process", "⚙️ Ishga kirishish"),
+    "in_process": ("ready", "✅ Tayyor deb belgilash"),
+}
+
+
+def get_master_order_list_keyboard(orders: list, page: int = 1, total_pages: int = 1) -> InlineKeyboardMarkup:
+    """Master's order list with each order as a clickable button."""
+    buttons = []
+    for o in orders:
+        icon = _STATUS_ICON.get(o.get("status", ""), "❓")
+        car = f"{o.get('brand', '') or ''} {o.get('model', '') or ''}".strip() or "—"
+        label = f"{icon} {o['order_number']} | {car}"
+        buttons.append([InlineKeyboardButton(text=label[:60], callback_data=f"mst_order_view:{o['order_number']}")])
+    nav = []
+    if page > 1:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"mst_order_page:{page - 1}"))
+    nav.append(InlineKeyboardButton(text=f"{page}/{total_pages}", callback_data="noop"))
+    if page < total_pages:
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"mst_order_page:{page + 1}"))
+    if nav:
+        buttons.append(nav)
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def get_master_order_detail_keyboard(order_number: str, current_status: str) -> InlineKeyboardMarkup:
+    """Status change + back button for a master's order."""
+    buttons = []
+    if current_status in _NEXT_STATUS:
+        next_st, next_label = _NEXT_STATUS[current_status]
+        buttons.append([InlineKeyboardButton(text=next_label, callback_data=f"mst_status:{order_number}:{next_st}")])
+    buttons.append([InlineKeyboardButton(text="◀️ Orqaga", callback_data="mst_orders_back")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def get_admin_user_keyboard(user_id: int, role: str, is_active: bool) -> InlineKeyboardMarkup:
     """Return admin inline keyboard for a user (client or master)."""
     buttons = []

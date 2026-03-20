@@ -14,19 +14,23 @@ from bot.database.models import (
     get_all_orders,
     get_dashboard_stats,
     get_financial_summary_by_master,
+    get_order_detail,
     unblock_user,
 )
 from bot.keyboards.inline import (
     get_admin_confirm_keyboard,
+    get_admin_order_detail_keyboard,
     get_admin_order_keyboard,
+    get_admin_orders_keyboard,
     get_admin_page_keyboard,
     get_admin_period_keyboard,
     get_admin_user_keyboard,
     get_broadcast_confirm_keyboard,
     get_broadcast_target_keyboard,
+    get_clients_for_master_keyboard,
 )
 from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
-from bot.states import AdminBroadcast, AdminCreateMaster, AdminSearch
+from bot.states import AdminBroadcast, AdminCreateMaster, AdminNewMaster, AdminSearch
 from bot.utils.formatters import format_datetime, format_money, format_order_status
 
 logger = logging.getLogger(__name__)
@@ -232,16 +236,108 @@ async def admin_dashboard_handler(message: Message, db_user: dict):
 # ---------------------------------------------------------------------------
 
 @router.message(F.text == "📋 Barcha buyurtmalar")
-async def admin_all_orders_handler(message: Message, db_user: dict, state: FSMContext):
+async def admin_all_orders_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
-    await state.set_state(AdminSearch.waiting_for_order)
-    await message.answer(
-        "📋 <b>Buyurtmalarni qidirish</b>\n\n"
-        "Buyurtma raqami, davlat raqami yoki mijoz ismini kiriting:",
+    try:
+        result = await get_all_orders(page=1, page_size=PAGE_SIZE)
+        items = [dict(o) for o in result.get("items", [])]
+        total = result.get("total", 0)
+        total_pages = max(1, math.ceil(total / PAGE_SIZE))
+        await message.answer(
+            f"📋 <b>Barcha buyurtmalar</b> ({total} ta) — Sahifa 1/{total_pages}",
+            parse_mode="HTML",
+            reply_markup=get_admin_orders_keyboard(items, 1, total_pages),
+        )
+    except Exception:
+        logger.exception("Failed to load orders list")
+        await message.answer("❌ Buyurtmalarni yuklashda xato.")
+
+
+@router.callback_query(F.data.startswith("adm_orders_page:"))
+async def admin_orders_page_callback(callback: CallbackQuery, db_user: dict):
+    if not _require_admin(db_user):
+        await callback.answer("Ruxsat yo'q.")
+        return
+    page = int(callback.data.split(":")[1])
+    result = await get_all_orders(page=page, page_size=PAGE_SIZE)
+    items = [dict(o) for o in result.get("items", [])]
+    total = result.get("total", 0)
+    total_pages = max(1, math.ceil(total / PAGE_SIZE))
+    await callback.message.edit_text(
+        f"📋 <b>Barcha buyurtmalar</b> ({total} ta) — Sahifa {page}/{total_pages}",
         parse_mode="HTML",
+        reply_markup=get_admin_orders_keyboard(items, page, total_pages),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("adm_order_view:"))
+async def admin_order_view_callback(callback: CallbackQuery, db_user: dict):
+    if not _require_admin(db_user):
+        await callback.answer("Ruxsat yo'q.")
+        return
+    order_number = callback.data.split(":", 1)[1]
+    order = await get_order_detail(order_number)
+    if not order:
+        await callback.answer("Buyurtma topilmadi.")
+        return
+    order = dict(order)
+    car = f"{order.get('brand','') or ''} {order.get('model','') or ''}".strip() or "—"
+    master = order.get("master_full_name") or order.get("master_name") or "—"
+    client = order.get("client_full_name") or order.get("client_name") or "—"
+    txt = (
+        f"📋 <b>{order['order_number']}</b>\n"
+        f"Holat: {format_order_status(order['status'])}\n"
+        f"Mashina: {car} | {order.get('plate','—')}\n"
+        f"Mijoz: {client}\n"
+        f"Usta: {master}\n"
+        f"Muammo: {order.get('problem') or '—'}\n"
+        f"Ish: {order.get('work_desc') or '—'}\n"
+        f"Narx: {format_money(order.get('agreed_price', 0))}\n"
+        f"Sana: {format_datetime(order.get('created_at'))}"
+    )
+    if order.get("status") == "closed":
+        txt += (
+            f"\n💰 Qismlar: {format_money(order.get('parts_cost', 0))}\n"
+            f"Foyda: {format_money(order.get('profit', 0))}\n"
+            f"Yopilgan: {format_datetime(order.get('closed_at'))}"
+        )
+    await callback.message.edit_text(
+        txt, parse_mode="HTML",
+        reply_markup=get_admin_order_detail_keyboard(order["order_number"], order["status"]),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "adm_order_search")
+async def admin_order_search_start(callback: CallbackQuery, db_user: dict, state: FSMContext):
+    if not _require_admin(db_user):
+        await callback.answer("Ruxsat yo'q.")
+        return
+    await state.set_state(AdminSearch.waiting_for_order)
+    await callback.message.answer(
+        "🔍 Buyurtma raqami, davlat raqami yoki mijoz ismini kiriting:",
         reply_markup=get_cancel_keyboard(),
     )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "adm_orders_back")
+async def admin_orders_back_callback(callback: CallbackQuery, db_user: dict):
+    if not _require_admin(db_user):
+        await callback.answer("Ruxsat yo'q.")
+        return
+    result = await get_all_orders(page=1, page_size=PAGE_SIZE)
+    items = [dict(o) for o in result.get("items", [])]
+    total = result.get("total", 0)
+    total_pages = max(1, math.ceil(total / PAGE_SIZE))
+    await callback.message.edit_text(
+        f"📋 <b>Barcha buyurtmalar</b> ({total} ta) — Sahifa 1/{total_pages}",
+        parse_mode="HTML",
+        reply_markup=get_admin_orders_keyboard(items, 1, total_pages),
+    )
+    await callback.answer()
 
 
 @router.message(AdminSearch.waiting_for_order)
@@ -255,23 +351,17 @@ async def admin_order_search_handler(message: Message, state: FSMContext, db_use
     if not orders:
         await message.answer("❌ Buyurtma topilmadi.", reply_markup=get_main_keyboard("admin"))
         return
-    lines = ["📋 <b>Natijalar:</b>\n"]
     for o in orders:
         car = f"{o.get('brand','') or ''} {o.get('model','') or ''}".strip() or "—"
-        lines.append(
+        txt = (
             f"<b>{o['order_number']}</b> | {car} | {o.get('plate','—')}\n"
-            f"Holat: {format_order_status(o['status'])} | {format_money(o['agreed_price'])}\n"
+            f"Holat: {format_order_status(o['status'])} | {format_money(o.get('agreed_price',0))}\n"
             f"Mijoz: {o.get('client_name','—')} | Usta: {o.get('master_name','—')}\n"
-            f"Sana: {format_datetime(o['created_at'])}\n"
+            f"Sana: {format_datetime(o['created_at'])}"
         )
-        kb = get_admin_order_keyboard(o['order_number'], o['status'])
-        if kb:
-            await message.answer("\n".join(lines[-1:]), parse_mode="HTML", reply_markup=kb)
-            lines.pop()
-    if len(lines) > 1:
-        await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=get_main_keyboard("admin"))
-    else:
-        await message.answer("✅ Tugadi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(txt, parse_mode="HTML",
+                             reply_markup=get_admin_order_keyboard(o["order_number"], o["status"]))
+    await message.answer("✅ Qidiruv tugadi.", reply_markup=get_main_keyboard("admin"))
 
 
 @router.callback_query(F.data.startswith("adm_force_close:"))
@@ -660,104 +750,132 @@ async def admin_plate_search_handler(message: Message, state: FSMContext, db_use
 # ---------------------------------------------------------------------------
 
 @router.message(F.text == "➕ Yangi usta")
-async def admin_create_master_handler(message: Message, db_user: dict, state: FSMContext):
+async def admin_create_master_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
-    await state.set_state(AdminCreateMaster.waiting_for_full_name)
+    clients, total = await _get_all_clients(page=1)
+    total_pages = max(1, math.ceil(total / PAGE_SIZE))
     await message.answer(
-        "➕ <b>Yangi usta yaratish</b>\n\nUstaning to'liq ismini kiriting:",
+        f"👥 <b>Yangi usta uchun mijoz tanlang</b> ({total} ta)\nSahifa 1/{total_pages}:",
         parse_mode="HTML",
-        reply_markup=get_cancel_keyboard(),
+        reply_markup=get_clients_for_master_keyboard(clients, 1, total_pages),
     )
 
 
-@router.message(AdminCreateMaster.waiting_for_full_name)
-async def admin_create_master_name_handler(message: Message, state: FSMContext):
+@router.callback_query(F.data.startswith("adm_nm_page:"))
+async def admin_new_master_clients_page(callback: CallbackQuery, db_user: dict):
+    if not _require_admin(db_user):
+        await callback.answer("Ruxsat yo'q.")
+        return
+    page = int(callback.data.split(":")[1])
+    clients, total = await _get_all_clients(page=page)
+    total_pages = max(1, math.ceil(total / PAGE_SIZE))
+    await callback.message.edit_text(
+        f"👥 <b>Yangi usta uchun mijoz tanlang</b> ({total} ta)\nSahifa {page}/{total_pages}:",
+        parse_mode="HTML",
+        reply_markup=get_clients_for_master_keyboard(clients, page, total_pages),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("adm_pick_client:"))
+async def admin_pick_client_for_master(callback: CallbackQuery, db_user: dict, state: FSMContext):
+    if not _require_admin(db_user):
+        await callback.answer("Ruxsat yo'q.")
+        return
+    user_id = int(callback.data.split(":")[1])
+    user = await _get_user_by_id(user_id)
+    if not user:
+        await callback.answer("Mijoz topilmadi.")
+        return
+    await state.update_data(promote_user_id=user_id, promote_full_name=user["full_name"])
+    await state.set_state(AdminNewMaster.waiting_for_username)
+    await callback.message.edit_text(
+        f"👤 <b>{user['full_name']}</b> tanlandi.\n"
+        f"Telefon: {user.get('phone') or '—'}\n\n"
+        "Username kiriting (yoki /skip — avtomatik yaratiladi):",
+        parse_mode="HTML",
+    )
+    await callback.answer()
+
+
+@router.message(AdminNewMaster.waiting_for_username)
+async def admin_new_master_username_handler(message: Message, state: FSMContext):
     if message.text == "❌ Bekor qilish":
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
         return
-    await state.update_data(full_name=message.text.strip())
-    await state.set_state(AdminCreateMaster.waiting_for_username)
-    await message.answer("Username kiriting (lotin harflari va raqamlar):")
+    await state.update_data(new_username=message.text.strip())
+    await state.set_state(AdminNewMaster.waiting_for_password)
+    await message.answer("Parol kiriting (yoki /skip — avtomatik yaratiladi):")
 
 
-@router.message(AdminCreateMaster.waiting_for_username)
-async def admin_create_master_username_handler(message: Message, state: FSMContext):
+@router.message(AdminNewMaster.waiting_for_password)
+async def admin_new_master_password_handler(message: Message, state: FSMContext):
     if message.text == "❌ Bekor qilish":
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
         return
-    await state.update_data(username=message.text.strip())
-    await state.set_state(AdminCreateMaster.waiting_for_password)
-    await message.answer("Parol kiriting (kamida 6 ta belgi) yoki /skip yuboring — avtomatik yaratiladi:")
-
-
-@router.message(AdminCreateMaster.waiting_for_password)
-async def admin_create_master_password_handler(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
-        return
-    pwd = message.text.strip()
-    if pwd == "/skip":
-        pwd = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
-    await state.update_data(password=pwd)
-    await state.set_state(AdminCreateMaster.waiting_for_phone)
-    await message.answer("Telefon raqamini kiriting (ixtiyoriy, /skip):")
-
-
-@router.message(AdminCreateMaster.waiting_for_phone)
-async def admin_create_master_phone_handler(message: Message, state: FSMContext, db_user: dict):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
-        return
-    phone = None if message.text.strip() == "/skip" else message.text.strip()
     data = await state.get_data()
     await state.clear()
+    user_id = data["promote_user_id"]
+    full_name = data["promote_full_name"]
+    username_input = data.get("new_username", "/skip")
+    password_input = message.text.strip()
+    if username_input == "/skip":
+        base = (full_name or "master").lower().replace(" ", "")[:10]
+        username = base + str(user_id)
+    else:
+        username = username_input
+    if password_input == "/skip":
+        password = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+    else:
+        password = password_input
     try:
-        from sqlalchemy import text
+        from sqlalchemy import text as sqlt
         from bot.database.connection import async_session
         from web.auth import hash_password
-        import time
-        pwd_hash = hash_password(data["password"])
         async with async_session() as session:
-            existing = await session.execute(
-                text("SELECT id FROM users WHERE username = :u"), {"u": data["username"]}
-            )
+            existing = await session.execute(sqlt("SELECT id FROM users WHERE username=:u"), {"u": username})
             if existing.first():
                 await message.answer(
-                    "❌ Bu username allaqachon mavjud. Boshqa username tanlang.",
+                    f"❌ '{username}' username allaqachon mavjud. /skip yoki boshqa username bilan qayta urining.",
                     reply_markup=get_main_keyboard("admin"),
                 )
                 return
-            result = await session.execute(
-                text("INSERT INTO users (telegram_id, full_name, phone, role, username, password_hash, is_active) "
-                     "VALUES (:tid, :name, :phone, 'master', :username, :hash, true) "
-                     "RETURNING id, full_name, username"),
-                {
-                    "tid": int(time.time() * 1000),
-                    "name": data["full_name"],
-                    "phone": phone,
-                    "username": data["username"],
-                    "hash": pwd_hash,
-                },
+            pwd_hash = hash_password(password)
+            await session.execute(
+                sqlt("UPDATE users SET role='master', username=:u, password_hash=:p WHERE id=:id"),
+                {"u": username, "p": pwd_hash, "id": user_id},
             )
             await session.commit()
-            row = result.first()
+        user = await _get_user_by_id(user_id)
+        if user and user.get("telegram_id"):
+            from bot.config import BOT_TOKEN
+            import httpx
+            creds = (
+                f"Tabriklaymiz! Siz usta sifatida tayinlandingiz.\n\n"
+                f"Web panelga kirish:\n{WEB_URL}/login\n\n"
+                f"Username: {username}\nPassword: {password}\n\n"
+                "Tizimga kirgach parolingizni o'zgartiring."
+            )
+            async with httpx.AsyncClient() as hc:
+                await hc.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={"chat_id": user["telegram_id"], "text": creds},
+                    timeout=5.0,
+                )
         await message.answer(
-            f"✅ <b>Usta yaratildi!</b>\n\n"
-            f"Ism: <b>{row[1]}</b>\n"
-            f"Username: <code>{row[2]}</code>\n"
-            f"Parol: <code>{data['password']}</code>\n"
+            f"✅ <b>{full_name}</b> ustaga ko'tarildi!\n\n"
+            f"Username: <code>{username}</code>\n"
+            f"Parol: <code>{password}</code>\n"
             f"Kirish: {WEB_URL}/login",
             parse_mode="HTML",
             reply_markup=get_main_keyboard("admin"),
         )
     except Exception:
-        logger.exception("Failed to create master")
-        await message.answer("❌ Usta yaratishda xato yuz berdi.", reply_markup=get_main_keyboard("admin"))
+        logger.exception("Failed to promote client to master")
+        await message.answer("❌ Xato yuz berdi.", reply_markup=get_main_keyboard("admin"))
 
 
 # ---------------------------------------------------------------------------

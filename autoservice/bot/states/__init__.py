@@ -32,3 +32,8 @@ class AdminCreateMaster(StatesGroup):
     waiting_for_username = State()
     waiting_for_password = State()
     waiting_for_phone = State()
+
+
+class AdminNewMaster(StatesGroup):
+    waiting_for_username = State()
+    waiting_for_password = State()
