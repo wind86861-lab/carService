@@ -25,6 +25,7 @@ from bot.database.models import (
 from bot.keyboards.inline import (
     get_master_order_detail_keyboard,
     get_master_order_list_keyboard,
+    get_share_order_keyboard,
 )
 from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
 from bot.states import MasterCloseOrder, MasterCreateOrder, MasterUpdateParts
@@ -331,6 +332,7 @@ async def master_order_confirm(message: Message, state: FSMContext, db_user: dic
                 await add_photo(order_id, fid)
             except Exception:
                 logger.warning("Failed to save photo for order %s", order_number)
+        from bot.config import BOT_USERNAME
         await message.answer(
             f"✅ <b>Buyurtma yaratildi!</b>\n\n"
             f"Buyurtma raqami: <b>{order_number}</b>\n"
@@ -341,6 +343,16 @@ async def master_order_confirm(message: Message, state: FSMContext, db_user: dic
             parse_mode="HTML",
             reply_markup=get_main_keyboard("master"),
         )
+        if BOT_USERNAME:
+            deep_link = f"https://t.me/{BOT_USERNAME}?start={order_number}"
+            await message.answer(
+                f"📤 <b>Mijozga havola:</b>\n"
+                f"Quyidagi tugmani bosib havolani mijozga yuboring. "
+                f"Mijoz havolaga bosib mashinasini kuzatadi.\n\n"
+                f"<code>{deep_link}</code>",
+                parse_mode="HTML",
+                reply_markup=get_share_order_keyboard(order_number),
+            )
     except Exception:
         logger.exception("Failed to create order")
         await message.answer(
@@ -461,10 +473,11 @@ async def master_order_view_callback(callback: CallbackQuery, db_user: dict):
         await callback.answer("Buyurtma topilmadi."); return
     order = dict(order)
     confirmed = bool(order.get("client_confirmed"))
+    has_client = bool(order.get("client_id"))
     await callback.message.edit_text(
         _order_text(order), parse_mode="HTML",
         reply_markup=get_master_order_detail_keyboard(
-            order["order_number"], order["status"], confirmed
+            order["order_number"], order["status"], confirmed, has_client
         ),
     )
     await callback.answer()
@@ -513,11 +526,12 @@ async def master_status_change_callback(callback: CallbackQuery, db_user: dict):
 
     order = dict(await get_order_detail(order_number))
     confirmed = bool(order.get("client_confirmed"))
+    has_client = bool(order.get("client_id"))
     await callback.message.edit_text(
         "✅ Holat yangilandi!\n\n" + _order_text(order),
         parse_mode="HTML",
         reply_markup=get_master_order_detail_keyboard(
-            order["order_number"], order["status"], confirmed
+            order["order_number"], order["status"], confirmed, has_client
         ),
     )
     await callback.answer("✅ Holat yangilandi!")
