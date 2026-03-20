@@ -194,12 +194,16 @@ def get_master_order_list_keyboard(orders: list, page: int = 1, total_pages: int
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_master_order_detail_keyboard(order_number: str, current_status: str) -> InlineKeyboardMarkup:
-    """Status change + back button for a master's order."""
+def get_master_order_detail_keyboard(
+    order_number: str, current_status: str, client_confirmed: bool = False
+) -> InlineKeyboardMarkup:
+    """Status change + financial close + back button for a master's order."""
     buttons = []
     if current_status in _NEXT_STATUS:
         next_st, next_label = _NEXT_STATUS[current_status]
         buttons.append([InlineKeyboardButton(text=next_label, callback_data=f"mst_status:{order_number}:{next_st}")])
+    if current_status == "ready" and client_confirmed:
+        buttons.append([InlineKeyboardButton(text="💰 Moliyaviy hisobotni yopish", callback_data=f"mst_close:{order_number}")])
     buttons.append([InlineKeyboardButton(text="◀️ Orqaga", callback_data="mst_orders_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

@@ -48,6 +48,13 @@ class MasterCreateOrder(StatesGroup):
     waiting_for_client_name = State()
     waiting_for_client_phone = State()
     waiting_for_problem = State()
+    waiting_for_work_desc = State()
     waiting_for_price = State()
     waiting_for_paid = State()
+    waiting_for_photos = State()
+    waiting_for_confirm = State()
+
+
+class MasterCloseOrder(StatesGroup):
+    waiting_for_parts_cost = State()
     waiting_for_confirm = State()

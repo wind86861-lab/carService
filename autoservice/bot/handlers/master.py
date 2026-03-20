@@ -6,12 +6,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.database.models import (
+    add_photo,
+    close_order,
     create_car,
     create_order,
     get_financial_summary_by_master,
     get_next_order_number,
     get_order_detail,
     get_orders_by_master,
+    get_user_by_id,
+    get_users_by_role,
     update_order_status,
 )
 from bot.keyboards.inline import (
@@ -19,8 +23,9 @@ from bot.keyboards.inline import (
     get_master_order_list_keyboard,
 )
 from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
-from bot.states import MasterCreateOrder
+from bot.states import MasterCloseOrder, MasterCreateOrder
 from bot.utils.formatters import format_datetime, format_money, format_order_status
+from bot.utils.notifications import notify_client_receipt_request
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +33,26 @@ router = Router()
 
 _PAGE = 8
 _ACTIVE = ["new", "preparation", "in_process", "ready"]
+_MASTER_SHARE_RATIO = 0.7   # 70 % of profit to master
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _cancel_check(text: str) -> bool:
+    return text == "❌ Bekor qilish"
+
+
+async def _cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+
+
+def _parse_amount(text: str):
+    """Return int from a money string, or None if invalid."""
+    clean = text.strip().replace(" ", "").replace(",", "").replace("_", "")
+    return int(clean) if clean.isdigit() else None
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +65,8 @@ async def master_new_order_handler(message: Message, db_user: dict, state: FSMCo
         return
     await state.set_state(MasterCreateOrder.waiting_for_brand)
     await message.answer(
-        "🆕 <b>Yangi buyurtma</b>\n\n1️⃣ Mashina <b>markasini</b> kiriting:\n(masalan: Chevrolet, Nexia, Matiz)",
+        "🆕 <b>Yangi buyurtma</b>\n\n"
+        "1️⃣ Mashina <b>markasini</b> kiriting:\n(masalan: Chevrolet, Nexia, Matiz)",
         parse_mode="HTML",
         reply_markup=get_cancel_keyboard(),
     )
@@ -48,32 +74,29 @@ async def master_new_order_handler(message: Message, db_user: dict, state: FSMCo
 
 @router.message(MasterCreateOrder.waiting_for_brand)
 async def master_order_brand(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     await state.update_data(brand=message.text.strip())
     await state.set_state(MasterCreateOrder.waiting_for_model)
-    await message.answer("2️⃣ Mashina <b>modelini</b> kiriting:\n(masalan: Lacetti, 5-3, 3)", parse_mode="HTML")
+    await message.answer("2️⃣ Mashina <b>modelini</b> kiriting:", parse_mode="HTML")
 
 
 @router.message(MasterCreateOrder.waiting_for_model)
 async def master_order_model(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     await state.update_data(model=message.text.strip())
     await state.set_state(MasterCreateOrder.waiting_for_plate)
-    await message.answer("3️⃣ Davlat <b>raqamini</b> kiriting:\n(masalan: 01A123BB)", parse_mode="HTML")
+    await message.answer(
+        "3️⃣ Davlat <b>raqamini</b> kiriting:\n(masalan: 01A123BB)",
+        parse_mode="HTML",
+    )
 
 
 @router.message(MasterCreateOrder.waiting_for_plate)
 async def master_order_plate(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     await state.update_data(plate=message.text.strip().upper())
     await state.set_state(MasterCreateOrder.waiting_for_color)
     await message.answer("4️⃣ Mashina <b>rangini</b> kiriting yoki /skip:", parse_mode="HTML")
@@ -81,22 +104,21 @@ async def master_order_plate(message: Message, state: FSMContext):
 
 @router.message(MasterCreateOrder.waiting_for_color)
 async def master_order_color(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     color = None if message.text.strip() == "/skip" else message.text.strip()
     await state.update_data(color=color)
     await state.set_state(MasterCreateOrder.waiting_for_year)
-    await message.answer("5️⃣ Ishlab chiqarilgan <b>yilini</b> kiriting yoki /skip:", parse_mode="HTML")
+    await message.answer(
+        "5️⃣ Ishlab chiqarilgan <b>yilini</b> kiriting yoki /skip:",
+        parse_mode="HTML",
+    )
 
 
 @router.message(MasterCreateOrder.waiting_for_year)
 async def master_order_year(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     txt = message.text.strip()
     year = None
     if txt != "/skip":
@@ -112,88 +134,145 @@ async def master_order_year(message: Message, state: FSMContext):
 
 @router.message(MasterCreateOrder.waiting_for_client_name)
 async def master_order_client_name(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     await state.update_data(client_name=message.text.strip())
     await state.set_state(MasterCreateOrder.waiting_for_client_phone)
-    await message.answer("7️⃣ Mijozning <b>telefon raqami</b>:\n(masalan: +998901234567)", parse_mode="HTML")
+    await message.answer(
+        "7️⃣ Mijozning <b>telefon raqami</b>:\n(masalan: +998901234567)",
+        parse_mode="HTML",
+    )
 
 
 @router.message(MasterCreateOrder.waiting_for_client_phone)
 async def master_order_client_phone(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     phone = message.text.strip()
     if len(phone) < 7 or not any(c.isdigit() for c in phone):
         await message.answer("❗ To'g'ri telefon raqam kiriting (masalan: +998901234567):")
         return
     await state.update_data(client_phone=phone)
     await state.set_state(MasterCreateOrder.waiting_for_problem)
-    await message.answer("8️⃣ <b>Muammo/vazifa</b> tavsifini kiriting:", parse_mode="HTML")
+    await message.answer("8️⃣ <b>Muammo / nosozlik</b> tavsifini kiriting:", parse_mode="HTML")
 
 
 @router.message(MasterCreateOrder.waiting_for_problem)
 async def master_order_problem(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
     await state.update_data(problem=message.text.strip())
+    await state.set_state(MasterCreateOrder.waiting_for_work_desc)
+    await message.answer(
+        "9️⃣ <b>Bajariladigan ishlar</b> ro'yxatini kiriting yoki /skip:\n"
+        "(masalan: motor yog'i almashtirish, filtr almashtirish)",
+        parse_mode="HTML",
+    )
+
+
+@router.message(MasterCreateOrder.waiting_for_work_desc)
+async def master_order_work_desc(message: Message, state: FSMContext):
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+    work_desc = "" if message.text.strip() == "/skip" else message.text.strip()
+    await state.update_data(work_desc=work_desc)
     await state.set_state(MasterCreateOrder.waiting_for_price)
     await message.answer(
-        "9️⃣ Xizmat <b>narxini</b> kiriting (so'm):\n(masalan: 150000, yoki 0)",
+        "🔟 Xizmat <b>narxini</b> kiriting (so'm):\n(masalan: 150000)",
         parse_mode="HTML",
     )
 
 
 @router.message(MasterCreateOrder.waiting_for_price)
 async def master_order_price(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
-    txt = message.text.strip().replace(" ", "").replace(",", "")
-    if not txt.isdigit():
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+    amount = _parse_amount(message.text)
+    if amount is None:
         await message.answer("❗ Faqat raqam kiriting (masalan: 150000):")
         return
-    await state.update_data(agreed_price=int(txt))
+    await state.update_data(agreed_price=amount)
     await state.set_state(MasterCreateOrder.waiting_for_paid)
     await message.answer(
-        "🔟 Oldindan to'lov (<b>avans</b>) miqdori (so'm):\n(masalan: 50000, yoki 0)",
+        "1️⃣1️⃣ Oldindan to'lov (<b>avans</b>) miqdori (so'm):\n(masalan: 50000, yoki 0)",
         parse_mode="HTML",
     )
 
 
 @router.message(MasterCreateOrder.waiting_for_paid)
 async def master_order_paid(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
-    txt = message.text.strip().replace(" ", "").replace(",", "")
-    if not txt.isdigit():
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+    paid = _parse_amount(message.text)
+    if paid is None:
         await message.answer("❗ Faqat raqam kiriting (masalan: 50000 yoki 0):")
         return
-    paid = int(txt)
+    data = await state.get_data()
+    price = data.get("agreed_price", 0)
+    if paid > price:
+        await message.answer(
+            f"❗ Avans ({paid:,}) xizmat narxidan ({price:,}) ko'p bo'lishi mumkin emas.\n"
+            "Qaytadan kiriting:"
+        )
+        return
     await state.update_data(paid_amount=paid)
+    await state.set_state(MasterCreateOrder.waiting_for_photos)
+    await message.answer(
+        "1️⃣2️⃣ <b>Mashina rasmlarini</b> yuboring (1–2 ta).\n"
+        "Tugatish uchun /done, o'tkazib yuborish uchun /skip:",
+        parse_mode="HTML",
+    )
+
+
+@router.message(MasterCreateOrder.waiting_for_photos)
+async def master_order_photos(message: Message, state: FSMContext):
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+
+    data = await state.get_data()
+    photos: list = data.get("photos", [])
+
+    if message.text and message.text.strip() in ("/skip", "/done"):
+        await _show_order_summary(message, state)
+        return
+
+    if not message.photo:
+        await message.answer("Rasm yuboring yoki /done (tayyor) / /skip (o'tkazish):")
+        return
+
+    file_id = message.photo[-1].file_id
+    photos.append(file_id)
+    await state.update_data(photos=photos)
+
+    if len(photos) >= 2:
+        await message.answer("✅ 2 ta rasm qabul qilindi.")
+        await _show_order_summary(message, state)
+    else:
+        await message.answer(
+            f"✅ {len(photos)} ta rasm qabul qilindi. "
+            "Yana 1 ta rasm yuboring yoki /done:"
+        )
+
+
+async def _show_order_summary(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.set_state(MasterCreateOrder.waiting_for_confirm)
     price = data.get("agreed_price", 0)
+    paid = data.get("paid_amount", 0)
+    photos = data.get("photos", [])
     summary = (
         "✅ <b>Buyurtmani tasdiqlang:</b>\n\n"
-        f"🚗 Mashina:  <b>{data['brand']} {data['model']}</b>\n"
-        f"🔢 Raqam:   <b>{data['plate']}</b>\n"
-        f"🎨 Rang:    {data.get('color') or '—'}\n"
-        f"📅 Yil:     {data.get('year') or '—'}\n"
-        f"👤 Mijoz:   <b>{data['client_name']}</b>\n"
-        f"📞 Tel:     {data['client_phone']}\n"
-        f"🔧 Muammo: {data['problem']}\n"
-        f"💰 Narx:    <b>{price:,} so'm</b>\n"
-        f"💵 Avans:   <b>{paid:,} so'm</b>\n\n"
+        f"🚗 Mashina:   <b>{data['brand']} {data['model']}</b>\n"
+        f"🔢 Raqam:    <b>{data['plate']}</b>\n"
+        f"🎨 Rang:     {data.get('color') or '—'}\n"
+        f"📅 Yil:      {data.get('year') or '—'}\n"
+        f"👤 Mijoz:    <b>{data['client_name']}</b>\n"
+        f"📞 Tel:      {data['client_phone']}\n"
+        f"🔧 Muammo:  {data['problem']}\n"
+        f"🛠 Ishlar:   {data.get('work_desc') or '—'}\n"
+        f"💰 Narx:     <b>{price:,} so'm</b>\n"
+        f"💵 Avans:    <b>{paid:,} so'm</b>\n"
+        f"📷 Rasmlar:  {len(photos)} ta\n\n"
         "Tasdiqlash uchun <b>Ha</b>, bekor qilish uchun <b>Yo'q</b> yuboring."
     )
     await message.answer(summary, parse_mode="HTML")
@@ -201,12 +280,13 @@ async def master_order_paid(message: Message, state: FSMContext):
 
 @router.message(MasterCreateOrder.waiting_for_confirm)
 async def master_order_confirm(message: Message, state: FSMContext, db_user: dict):
-    if message.text == "❌ Bekor qilish" or message.text.lower() in ("yo'q", "yoq", "no", "n"):
-        await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
-        return
+    if _cancel_check(message.text) or message.text.lower() in ("yo'q", "yoq", "no", "n"):
+        await _cancel(message, state); return
     if message.text.lower() not in ("ha", "yes", "y", "ok", "+"):
-        await message.answer("Tasdiqlash uchun <b>Ha</b>, bekor qilish uchun <b>Yo'q</b> yuboring.", parse_mode="HTML")
+        await message.answer(
+            "Tasdiqlash uchun <b>Ha</b>, bekor qilish uchun <b>Yo'q</b> yuboring.",
+            parse_mode="HTML",
+        )
         return
     data = await state.get_data()
     await state.clear()
@@ -222,22 +302,27 @@ async def master_order_confirm(message: Message, state: FSMContext, db_user: dic
         )
         price = data.get("agreed_price", 0)
         paid = data.get("paid_amount", 0)
-        await create_order(
+        order_id = await create_order(
             order_number=order_number,
             car_id=car_id,
             master_id=db_user["id"],
             client_name=data["client_name"],
             client_phone=data.get("client_phone") or "",
             problem=data["problem"],
-            work_desc="",
+            work_desc=data.get("work_desc") or "",
             agreed_price=price,
             paid_amount=paid,
         )
+        for fid in data.get("photos", []):
+            try:
+                await add_photo(order_id, fid)
+            except Exception:
+                logger.warning("Failed to save photo for order %s", order_number)
         await message.answer(
             f"✅ <b>Buyurtma yaratildi!</b>\n\n"
             f"Buyurtma raqami: <b>{order_number}</b>\n"
             f"Mashina: {data['brand']} {data['model']} | {data['plate']}\n"
-            f"Mijoz: {data['client_name']} | {data.get('client_phone','')}\n"
+            f"Mijoz: {data['client_name']} | {data.get('client_phone', '')}\n"
             f"Muammo: {data['problem']}\n"
             f"Narx: {price:,} so'm | Avans: {paid:,} so'm",
             parse_mode="HTML",
@@ -245,14 +330,17 @@ async def master_order_confirm(message: Message, state: FSMContext, db_user: dic
         )
     except Exception:
         logger.exception("Failed to create order")
-        await message.answer("❌ Buyurtma yaratishda xato yuz berdi.", reply_markup=get_main_keyboard("master"))
+        await message.answer(
+            "❌ Buyurtma yaratishda xato yuz berdi.",
+            reply_markup=get_main_keyboard("master"),
+        )
 
 
 # ---------------------------------------------------------------------------
 # My Orders — paginated inline list
 # ---------------------------------------------------------------------------
 
-async def _build_order_list_message(master_id: int, page: int = 1):
+async def _build_order_list(master_id: int, page: int = 1):
     all_orders = await get_orders_by_master(master_id)
     active = [dict(o) for o in all_orders if o["status"] in _ACTIVE]
     total = len(active)
@@ -266,7 +354,7 @@ async def _build_order_list_message(master_id: int, page: int = 1):
 async def master_my_orders_handler(message: Message, db_user: dict):
     if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
         return
-    active, page_items, total, total_pages, page = await _build_order_list_message(db_user["id"])
+    active, page_items, total, total_pages, page = await _build_order_list(db_user["id"])
     if not active:
         await message.answer("📋 <b>Faol buyurtmalar yo'q.</b>", parse_mode="HTML")
         return
@@ -280,10 +368,9 @@ async def master_my_orders_handler(message: Message, db_user: dict):
 @router.callback_query(F.data.startswith("mst_order_page:"))
 async def master_orders_page_callback(callback: CallbackQuery, db_user: dict):
     if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
-        await callback.answer("Ruxsat yo'q.")
-        return
+        await callback.answer("Ruxsat yo'q."); return
     page = int(callback.data.split(":")[1])
-    active, page_items, total, total_pages, page = await _build_order_list_message(db_user["id"], page)
+    active, page_items, total, total_pages, page = await _build_order_list(db_user["id"], page)
     await callback.message.edit_text(
         f"📋 <b>Mening buyurtmalarim</b> ({total} ta faol)\nSahifa {page}/{total_pages}",
         parse_mode="HTML",
@@ -295,9 +382,8 @@ async def master_orders_page_callback(callback: CallbackQuery, db_user: dict):
 @router.callback_query(F.data == "mst_orders_back")
 async def master_orders_back_callback(callback: CallbackQuery, db_user: dict):
     if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
-        await callback.answer("Ruxsat yo'q.")
-        return
-    active, page_items, total, total_pages, _ = await _build_order_list_message(db_user["id"])
+        await callback.answer("Ruxsat yo'q."); return
+    active, page_items, total, total_pages, _ = await _build_order_list(db_user["id"])
     await callback.message.edit_text(
         f"📋 <b>Mening buyurtmalarim</b> ({total} ta faol)\nSahifa 1/{total_pages}",
         parse_mode="HTML",
@@ -307,66 +393,64 @@ async def master_orders_back_callback(callback: CallbackQuery, db_user: dict):
 
 
 # ---------------------------------------------------------------------------
-# Order detail
+# Order detail view
 # ---------------------------------------------------------------------------
 
-def _format_order_detail(order: dict) -> str:
+def _order_text(order: dict) -> str:
     car = f"{order.get('brand', '') or ''} {order.get('model', '') or ''}".strip() or "—"
     client = order.get("client_full_name") or order.get("client_name") or "—"
-    txt = (
-        f"📋 <b>{order['order_number']}</b>\n"
-        f"Holat: {format_order_status(order['status'])}\n"
-        f"Mashina: {car} | {order.get('plate', '—')}\n"
-        f"Mijoz: {client}\n"
-        f"Muammo: {order.get('problem') or '—'}\n"
-        f"Ish tavsifi: {order.get('work_desc') or '—'}\n"
-        f"Narx: {format_money(order.get('agreed_price', 0))}\n"
-        f"Sana: {format_datetime(order.get('created_at'))}"
-    )
-    return txt
+    paid_flag = "✅" if order.get("client_confirmed") else "⏳"
+    lines = [
+        f"📋 <b>{order['order_number']}</b>",
+        f"Holat: {format_order_status(order['status'])}",
+        f"Mashina: {car} | {order.get('plate', '—')}",
+        f"Mijoz: {client}  |  📞 {order.get('client_phone') or order.get('client_phone_num') or '—'}",
+        f"Muammo: {order.get('problem') or '—'}",
+        f"Ish: {order.get('work_desc') or '—'}",
+        f"Narx: {format_money(order.get('agreed_price', 0))}  |  Avans: {format_money(order.get('paid_amount', 0))}",
+        f"Mijoz tasdiqladi: {paid_flag}",
+        f"Sana: {format_datetime(order.get('created_at'))}",
+    ]
+    return "\n".join(lines)
 
 
 @router.callback_query(F.data.startswith("mst_order_view:"))
 async def master_order_view_callback(callback: CallbackQuery, db_user: dict):
     if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
-        await callback.answer("Ruxsat yo'q.")
-        return
+        await callback.answer("Ruxsat yo'q."); return
     order_number = callback.data.split(":", 1)[1]
     order = await get_order_detail(order_number)
     if not order:
-        await callback.answer("Buyurtma topilmadi.")
-        return
+        await callback.answer("Buyurtma topilmadi."); return
     order = dict(order)
+    confirmed = bool(order.get("client_confirmed"))
     await callback.message.edit_text(
-        _format_order_detail(order),
-        parse_mode="HTML",
-        reply_markup=get_master_order_detail_keyboard(order["order_number"], order["status"]),
+        _order_text(order), parse_mode="HTML",
+        reply_markup=get_master_order_detail_keyboard(
+            order["order_number"], order["status"], confirmed
+        ),
     )
     await callback.answer()
 
 
 # ---------------------------------------------------------------------------
-# Status change
+# Status change + client notification on "ready"
 # ---------------------------------------------------------------------------
 
 @router.callback_query(F.data.startswith("mst_status:"))
 async def master_status_change_callback(callback: CallbackQuery, db_user: dict):
     if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
-        await callback.answer("Ruxsat yo'q.")
-        return
+        await callback.answer("Ruxsat yo'q."); return
+
     parts = callback.data.split(":")
-    order_number = parts[1]
-    new_status = parts[2]
+    order_number, new_status = parts[1], parts[2]
 
     valid = {"new": "preparation", "preparation": "in_process", "in_process": "ready"}
     order_now = await get_order_detail(order_number)
     if not order_now:
-        await callback.answer("Buyurtma topilmadi.")
-        return
-    current = order_now["status"]
-    if valid.get(current) != new_status:
-        await callback.answer("Bu holat o'zgartirib bo'lmaydi.")
-        return
+        await callback.answer("Buyurtma topilmadi."); return
+    if valid.get(order_now["status"]) != new_status:
+        await callback.answer("Bu holat o'zgartirib bo'lmaydi."); return
 
     try:
         await update_order_status(
@@ -376,17 +460,136 @@ async def master_status_change_callback(callback: CallbackQuery, db_user: dict):
         )
     except Exception:
         logger.exception("Failed to update order status")
-        await callback.answer("❌ Xato yuz berdi.")
-        return
+        await callback.answer("❌ Xato yuz berdi."); return
 
-    order = await get_order_detail(order_number)
-    order = dict(order)
+    # Notify client when order is ready
+    if new_status == "ready":
+        try:
+            client_id = order_now.get("client_id")
+            if client_id:
+                client = await get_user_by_id(client_id)
+                if client and client.get("telegram_id"):
+                    notify_client_receipt_request(client["telegram_id"], order_number)
+        except Exception:
+            logger.warning("Failed to notify client for order %s", order_number)
+
+    order = dict(await get_order_detail(order_number))
+    confirmed = bool(order.get("client_confirmed"))
     await callback.message.edit_text(
-        f"✅ Holat yangilandi!\n\n" + _format_order_detail(order),
+        "✅ Holat yangilandi!\n\n" + _order_text(order),
         parse_mode="HTML",
-        reply_markup=get_master_order_detail_keyboard(order["order_number"], order["status"]),
+        reply_markup=get_master_order_detail_keyboard(
+            order["order_number"], order["status"], confirmed
+        ),
     )
     await callback.answer("✅ Holat yangilandi!")
+
+
+# ---------------------------------------------------------------------------
+# Financial close — master enters parts cost after client confirms
+# ---------------------------------------------------------------------------
+
+@router.callback_query(F.data.startswith("mst_close:"))
+async def master_close_order_start(callback: CallbackQuery, db_user: dict, state: FSMContext):
+    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
+        await callback.answer("Ruxsat yo'q."); return
+    order_number = callback.data.split(":", 1)[1]
+    order = await get_order_detail(order_number)
+    if not order or not order.get("client_confirmed"):
+        await callback.answer("Mijoz hali tasdiqlamagan."); return
+    await state.update_data(close_order_number=order_number, close_agreed_price=order["agreed_price"])
+    await state.set_state(MasterCloseOrder.waiting_for_parts_cost)
+    await callback.message.answer(
+        f"💰 <b>{order_number}</b> — Moliyaviy hisobot\n\n"
+        f"Kelishilgan narx: <b>{format_money(order['agreed_price'])}</b>\n\n"
+        "Ehtiyot qismlar narxini (so'm) kiriting yoki 0:",
+        parse_mode="HTML",
+        reply_markup=get_cancel_keyboard(),
+    )
+    await callback.answer()
+
+
+@router.message(MasterCloseOrder.waiting_for_parts_cost)
+async def master_close_parts_cost(message: Message, state: FSMContext):
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+    parts_cost = _parse_amount(message.text)
+    if parts_cost is None:
+        await message.answer("❗ Faqat raqam kiriting (masalan: 30000 yoki 0):")
+        return
+    data = await state.get_data()
+    agreed = data.get("close_agreed_price", 0) or 0
+    profit = max(0, agreed - parts_cost)
+    master_share = int(profit * _MASTER_SHARE_RATIO)
+    service_share = profit - master_share
+
+    await state.update_data(
+        close_parts_cost=parts_cost,
+        close_profit=profit,
+        close_master_share=master_share,
+        close_service_share=service_share,
+    )
+    await state.set_state(MasterCloseOrder.waiting_for_confirm)
+    report = (
+        f"📊 <b>Moliyaviy hisobot — {data['close_order_number']}</b>\n\n"
+        f"Kelishilgan narx:   <b>{agreed:,} so'm</b>\n"
+        f"Ehtiyot qismlar:    <b>{parts_cost:,} so'm</b>\n"
+        f"Foyda:              <b>{profit:,} so'm</b>\n"
+        f"Sizning ulushingiz: <b>{master_share:,} so'm</b> (70%)\n"
+        f"Xizmat ulushi:      <b>{service_share:,} so'm</b> (30%)\n\n"
+        "Tasdiqlash uchun <b>Ha</b>, qayta kiritish uchun <b>Yo'q</b>."
+    )
+    await message.answer(report, parse_mode="HTML")
+
+
+@router.message(MasterCloseOrder.waiting_for_confirm)
+async def master_close_confirm(message: Message, state: FSMContext, db_user: dict):
+    if _cancel_check(message.text) or message.text.lower() in ("yo'q", "yoq", "no", "n"):
+        await state.set_state(MasterCloseOrder.waiting_for_parts_cost)
+        await message.answer("Ehtiyot qismlar narxini qaytadan kiriting:")
+        return
+    if message.text.lower() not in ("ha", "yes", "y", "ok", "+"):
+        await message.answer(
+            "Tasdiqlash uchun <b>Ha</b>, qayta kiritish uchun <b>Yo'q</b>.",
+            parse_mode="HTML",
+        )
+        return
+    data = await state.get_data()
+    await state.clear()
+    order_number = data["close_order_number"]
+    try:
+        await close_order(
+            order_number=order_number,
+            parts_cost=data["close_parts_cost"],
+            profit=data["close_profit"],
+            master_share=data["close_master_share"],
+            service_share=data["close_service_share"],
+            changed_by=db_user["id"],
+        )
+        # Notify admin
+        admins = await get_users_by_role("admin")
+        from bot.utils.notification_queue import notification_queue
+        admin_msg = (
+            f"💰 <b>Buyurtma yopildi — {order_number}</b>\n\n"
+            f"Usta: {db_user.get('full_name', '—')}\n"
+            f"Ehtiyot qismlar:    {data['close_parts_cost']:,} so'm\n"
+            f"Foyda:              {data['close_profit']:,} so'm\n"
+            f"Master ulushi:      {data['close_master_share']:,} so'm\n"
+            f"Xizmat ulushi:      {data['close_service_share']:,} so'm"
+        )
+        for admin in admins:
+            if admin.get("telegram_id"):
+                notification_queue.enqueue(telegram_id=admin["telegram_id"], message=admin_msg)
+
+        await message.answer(
+            f"✅ <b>{order_number}</b> muvaffaqiyatli yopildi!\n\n"
+            f"Sizning ulushingiz: <b>{data['close_master_share']:,} so'm</b>",
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard("master"),
+        )
+    except Exception:
+        logger.exception("Failed to close order %s", order_number)
+        await message.answer("❌ Buyurtmani yopishda xato yuz berdi.", reply_markup=get_main_keyboard("master"))
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +603,6 @@ async def master_statistics_handler(message: Message, db_user: dict):
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
     summary = await get_financial_summary_by_master(db_user["id"], month_start, now)
-
     if not summary or summary["order_count"] == 0:
         await message.answer("Bu oy hali yopilgan buyurtmalar yo'q.")
         return
