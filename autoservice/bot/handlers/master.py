@@ -118,7 +118,7 @@ async def master_order_client_name(message: Message, state: FSMContext):
         return
     await state.update_data(client_name=message.text.strip())
     await state.set_state(MasterCreateOrder.waiting_for_client_phone)
-    await message.answer("7️⃣ Mijozning <b>telefon raqami</b> yoki /skip:", parse_mode="HTML")
+    await message.answer("7️⃣ Mijozning <b>telefon raqami</b>:\n(masalan: +998901234567)", parse_mode="HTML")
 
 
 @router.message(MasterCreateOrder.waiting_for_client_phone)
@@ -127,7 +127,10 @@ async def master_order_client_phone(message: Message, state: FSMContext):
         await state.clear()
         await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
         return
-    phone = None if message.text.strip() == "/skip" else message.text.strip()
+    phone = message.text.strip()
+    if len(phone) < 7 or not any(c.isdigit() for c in phone):
+        await message.answer("❗ To'g'ri telefon raqam kiriting (masalan: +998901234567):")
+        return
     await state.update_data(client_phone=phone)
     await state.set_state(MasterCreateOrder.waiting_for_problem)
     await message.answer("8️⃣ <b>Muammo/vazifa</b> tavsifini kiriting:", parse_mode="HTML")
@@ -140,8 +143,46 @@ async def master_order_problem(message: Message, state: FSMContext):
         await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
         return
     await state.update_data(problem=message.text.strip())
+    await state.set_state(MasterCreateOrder.waiting_for_price)
+    await message.answer(
+        "9️⃣ Xizmat <b>narxini</b> kiriting (so'm):\n(masalan: 150000, yoki 0)",
+        parse_mode="HTML",
+    )
+
+
+@router.message(MasterCreateOrder.waiting_for_price)
+async def master_order_price(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    txt = message.text.strip().replace(" ", "").replace(",", "")
+    if not txt.isdigit():
+        await message.answer("❗ Faqat raqam kiriting (masalan: 150000):")
+        return
+    await state.update_data(agreed_price=int(txt))
+    await state.set_state(MasterCreateOrder.waiting_for_paid)
+    await message.answer(
+        "🔟 Oldindan to'lov (<b>avans</b>) miqdori (so'm):\n(masalan: 50000, yoki 0)",
+        parse_mode="HTML",
+    )
+
+
+@router.message(MasterCreateOrder.waiting_for_paid)
+async def master_order_paid(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    txt = message.text.strip().replace(" ", "").replace(",", "")
+    if not txt.isdigit():
+        await message.answer("❗ Faqat raqam kiriting (masalan: 50000 yoki 0):")
+        return
+    paid = int(txt)
+    await state.update_data(paid_amount=paid)
     data = await state.get_data()
     await state.set_state(MasterCreateOrder.waiting_for_confirm)
+    price = data.get("agreed_price", 0)
     summary = (
         "✅ <b>Buyurtmani tasdiqlang:</b>\n\n"
         f"🚗 Mashina:  <b>{data['brand']} {data['model']}</b>\n"
@@ -149,8 +190,10 @@ async def master_order_problem(message: Message, state: FSMContext):
         f"🎨 Rang:    {data.get('color') or '—'}\n"
         f"📅 Yil:     {data.get('year') or '—'}\n"
         f"👤 Mijoz:   <b>{data['client_name']}</b>\n"
-        f"📞 Tel:     {data.get('client_phone') or '—'}\n"
-        f"🔧 Muammo: {data['problem']}\n\n"
+        f"📞 Tel:     {data['client_phone']}\n"
+        f"🔧 Muammo: {data['problem']}\n"
+        f"💰 Narx:    <b>{price:,} so'm</b>\n"
+        f"💵 Avans:   <b>{paid:,} so'm</b>\n\n"
         "Tasdiqlash uchun <b>Ha</b>, bekor qilish uchun <b>Yo'q</b> yuboring."
     )
     await message.answer(summary, parse_mode="HTML")
@@ -177,6 +220,8 @@ async def master_order_confirm(message: Message, state: FSMContext, db_user: dic
             color=data.get("color") or "",
             year=data.get("year") or 0,
         )
+        price = data.get("agreed_price", 0)
+        paid = data.get("paid_amount", 0)
         await create_order(
             order_number=order_number,
             car_id=car_id,
@@ -185,15 +230,16 @@ async def master_order_confirm(message: Message, state: FSMContext, db_user: dic
             client_phone=data.get("client_phone") or "",
             problem=data["problem"],
             work_desc="",
-            agreed_price=0,
-            paid_amount=0,
+            agreed_price=price,
+            paid_amount=paid,
         )
         await message.answer(
             f"✅ <b>Buyurtma yaratildi!</b>\n\n"
             f"Buyurtma raqami: <b>{order_number}</b>\n"
             f"Mashina: {data['brand']} {data['model']} | {data['plate']}\n"
-            f"Mijoz: {data['client_name']}\n"
-            f"Muammo: {data['problem']}",
+            f"Mijoz: {data['client_name']} | {data.get('client_phone','')}\n"
+            f"Muammo: {data['problem']}\n"
+            f"Narx: {price:,} so'm | Avans: {paid:,} so'm",
             parse_mode="HTML",
             reply_markup=get_main_keyboard("master"),
         )
