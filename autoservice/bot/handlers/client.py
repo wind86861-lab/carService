@@ -2,6 +2,7 @@ import logging
 
 from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto
+from aiogram.types import FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from bot.i18n import t, lang_of
@@ -166,8 +167,18 @@ async def orders_page_callback(callback: CallbackQuery, db_user: dict):
 # ------------------------------------------------------------------
 
 
+def _is_tg_file_id(value: str) -> bool:
+    """A Telegram file_id is a long (>40 chars) alphanumeric string without a file extension."""
+    if not value:
+        return False
+    if '.' in value.split('/')[-1]:
+        return False
+    return len(value) > 40
+
+
 @router.callback_query(F.data.startswith("photos:"))
 async def view_photos_callback(callback: CallbackQuery, db_user: dict):
+    import os
     lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
     order = await get_order_by_number(order_number)
@@ -177,8 +188,30 @@ async def view_photos_callback(callback: CallbackQuery, db_user: dict):
     if not photos:
         msg = "📷 Rasmlar yo'q" if lang == "uz" else "📷 Фото нет"
         await callback.answer(msg, show_alert=True); return
-    media = [InputMediaPhoto(media=p["file_id"]) for p in photos]
-    await callback.message.answer_media_group(media)
+
+    media = []
+    for p in photos:
+        fid = p["file_id"]
+        if _is_tg_file_id(fid):
+            media.append(InputMediaPhoto(media=fid))
+        else:
+            # Local file uploaded via web interface
+            local_path = f"/app/uploads/{os.path.basename(fid)}"
+            if os.path.exists(local_path):
+                media.append(InputMediaPhoto(media=FSInputFile(local_path)))
+            else:
+                logger.warning("Photo file not found: %s", local_path)
+
+    if not media:
+        msg = "📷 Rasmlar yo'q" if lang == "uz" else "📷 Фото нет"
+        await callback.answer(msg, show_alert=True); return
+
+    try:
+        await callback.message.answer_media_group(media)
+    except Exception as exc:
+        logger.exception("Failed to send photos for order %s: %s", order_number, exc)
+        err = "❌ Rasmlarni yuborishda xato" if lang == "uz" else "❌ Ошибка при отправке фото"
+        await callback.answer(err, show_alert=True)
     await callback.answer()
 
 
