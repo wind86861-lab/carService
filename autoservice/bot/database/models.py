@@ -1,3 +1,5 @@
+import asyncio
+
 from sqlalchemy import text
 
 from bot.database.connection import async_session

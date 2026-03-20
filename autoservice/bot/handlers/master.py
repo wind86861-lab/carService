@@ -8,10 +8,6 @@ from bot.utils.formatters import format_money, format_order_status
 router = Router()
 
 
-async def _is_master(message: Message, db_user: dict) -> bool:
-    return isinstance(db_user, dict) and db_user.get("role") == "master"
-
-
 @router.message(F.text == "🆕 Yangi buyurtma")
 async def master_new_order_handler(message: Message, db_user: dict):
     url = f"{WEB_URL}/new-order"
@@ -22,8 +18,10 @@ async def master_new_order_handler(message: Message, db_user: dict):
     )
 
 
-@router.message(F.text == "📋 Mening buyurtmalarim", _is_master)
+@router.message(F.text == "📋 Mening buyurtmalarim")
 async def master_my_orders_handler(message: Message, db_user: dict):
+    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
+        return
     active_statuses = ["new", "preparation", "in_process", "ready"]
     orders = await get_orders_by_master(db_user["id"])
     active = [o for o in orders if o["status"] in active_statuses]
