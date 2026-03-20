@@ -61,4 +61,6 @@ class MasterCloseOrder(StatesGroup):
 
 
 class MasterUpdateParts(StatesGroup):
+    waiting_for_item_name = State()
     waiting_for_amount = State()
+    waiting_for_receipt = State()

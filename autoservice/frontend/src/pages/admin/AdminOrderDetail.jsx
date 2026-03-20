@@ -4,7 +4,7 @@ import AdminLayout from '../../components/AdminLayout'
 import StatusBadge from '../../components/StatusBadge'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { getAdminOrderDetail, forceCloseOrder } from '../../api/admin'
-import { ArrowLeft, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') + ' UZS' }
 function fmtDate(d) {
@@ -30,6 +30,7 @@ export default function AdminOrderDetail() {
   const [partsCost, setPartsCost] = useState('')
   const [closeLoading, setCloseLoading] = useState(false)
   const [toast, setToast] = useState('')
+  const [photoIdx, setPhotoIdx] = useState(0)
 
   const reload = () => {
     getAdminOrderDetail(orderNumber).then(setOrder).catch(console.error).finally(() => setLoading(false))
@@ -54,6 +55,8 @@ export default function AdminOrderDetail() {
   if (!order) return <AdminLayout><div className="p-8 text-center text-gray-400">Order not found.</div></AdminLayout>
 
   const logs = order.logs || []
+  const photos = order.photos || []
+  const expenses = order.expenses || []
 
   return (
     <AdminLayout>
@@ -61,6 +64,29 @@ export default function AdminOrderDetail() {
         <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">{toast}</div>
       )}
       <div className="p-6 space-y-6 max-w-5xl">
+        {photos.length > 0 && (
+          <div className="card p-0 overflow-hidden">
+            <div className="relative bg-black aspect-video max-h-64">
+              <img src={photos[photoIdx]?.url} alt="" className="w-full h-full object-contain" />
+              {photos.length > 1 && (
+                <>
+                  <button onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full p-1">
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white text-xs bg-black/40 px-2 py-0.5 rounded-full">
+                {photoIdx + 1} / {photos.length}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/admin/orders')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
           <span className="font-mono font-bold text-blue-700 text-lg">{order.order_number}</span>
@@ -105,6 +131,48 @@ export default function AdminOrderDetail() {
             </div>
           </div>
         </div>
+
+        {expenses.length > 0 && (
+          <div className="card">
+            <h2 className="font-semibold text-gray-700 mb-3">🔩 Parts & Expenses</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase">
+                    <th className="text-left py-2 pr-3">Item</th>
+                    <th className="text-right py-2 pr-3">Amount</th>
+                    <th className="text-left py-2 pr-3">Added by</th>
+                    <th className="text-left py-2">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map(e => (
+                    <tr key={e.id} className="border-b border-gray-50 last:border-0">
+                      <td className="py-2 pr-3 font-medium">{e.item_name}</td>
+                      <td className="py-2 pr-3 text-right font-semibold text-blue-700 whitespace-nowrap">{fmt(e.amount)}</td>
+                      <td className="py-2 pr-3 text-gray-500 text-xs">{e.added_by_name || '—'}</td>
+                      <td className="py-2">
+                        {e.receipt_url
+                          ? <a href={e.receipt_url} target="_blank" rel="noreferrer">
+                            <img src={e.receipt_url} alt="receipt" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
+                          </a>
+                          : <span className="text-gray-300 text-xs">—</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-200">
+                    <td className="py-2 font-semibold">Total</td>
+                    <td className="py-2 text-right font-bold text-blue-800">{fmt(expenses.reduce((s, e) => s + e.amount, 0))}</td>
+                    <td /><td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
 
         {order.status !== 'closed' && (
           <div className="card border-2 border-red-100">

@@ -189,6 +189,47 @@ export default function OrderDetail() {
           </div>
         </div>
 
+        {(order.expenses || []).length > 0 && (
+          <div className="card">
+            <h2 className="font-semibold text-gray-700 mb-3">🔩 Parts & Expenses</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase">
+                    <th className="text-left py-2 pr-3">Item</th>
+                    <th className="text-right py-2 pr-3">Amount</th>
+                    <th className="text-left py-2">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(order.expenses || []).map(e => (
+                    <tr key={e.id} className="border-b border-gray-50 last:border-0">
+                      <td className="py-2 pr-3 font-medium">{e.item_name}</td>
+                      <td className="py-2 pr-3 text-right text-blue-700 font-semibold whitespace-nowrap">{fmt(e.amount)}</td>
+                      <td className="py-2">
+                        {e.receipt_url
+                          ? <a href={e.receipt_url} target="_blank" rel="noreferrer"
+                              className="inline-block">
+                              <img src={e.receipt_url} alt="receipt" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
+                            </a>
+                          : <span className="text-gray-300 text-xs">—</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-gray-200">
+                    <td className="py-2 font-semibold text-gray-700">Total</td>
+                    <td className="py-2 text-right font-bold text-blue-800">{fmt((order.expenses || []).reduce((s, e) => s + e.amount, 0))}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
         {order.status !== 'closed' && (
           <div className="card space-y-3">
             <h2 className="font-semibold text-gray-700">Actions</h2>

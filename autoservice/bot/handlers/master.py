@@ -10,8 +10,10 @@ from bot.database.models import (
     close_order,
     create_car,
     create_order,
+    create_order_expense,
     get_financial_summary_by_master,
     get_next_order_number,
+    get_order_by_number,
     get_order_detail,
     get_orders_by_master,
     get_user_by_id,
@@ -594,7 +596,7 @@ async def master_close_confirm(message: Message, state: FSMContext, db_user: dic
 
 
 # ---------------------------------------------------------------------------
-# Add parts cost to active order
+# Add parts cost to active order (item_name + amount + receipt photo)
 # ---------------------------------------------------------------------------
 
 @router.callback_query(F.data.startswith("mst_add_parts:"))
@@ -607,45 +609,90 @@ async def master_add_parts_start(callback: CallbackQuery, db_user: dict, state: 
         await callback.answer("Buyurtma topilmadi."); return
     if order["status"] == "closed":
         await callback.answer("Yopilgan buyurtmaga qo'shib bo'lmaydi."); return
-    current_parts = order.get("parts_cost") or 0
-    await state.update_data(parts_order_number=order_number)
-    await state.set_state(MasterUpdateParts.waiting_for_amount)
+    current_parts = int(order.get("parts_cost") or 0)
+    await state.update_data(parts_order_number=order_number, parts_order_id=order["id"])
+    await state.set_state(MasterUpdateParts.waiting_for_item_name)
     await callback.message.answer(
-        f"🔩 <b>{order_number}</b> — Qismlar narxi\n\n"
-        f"Hozirgi qismlar narxi: <b>{int(current_parts):,} so'm</b>\n\n"
-        "Qo'shmoqchi bo'lgan miqdorni kiriting (so'm):\n"
-        "(masalan: 50000)",
+        f"🔩 <b>{order_number}</b> — Xarajat qo'shish\n\n"
+        f"Hozirgi jami xarajat: <b>{current_parts:,} so'm</b>\n\n"
+        "1️⃣ Xarajat <b>nomini</b> kiriting:\n(masalan: Balon salidor, Moy filtri)",
         parse_mode="HTML",
         reply_markup=get_cancel_keyboard(),
     )
     await callback.answer()
 
 
+@router.message(MasterUpdateParts.waiting_for_item_name)
+async def master_add_parts_name(message: Message, state: FSMContext):
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+    await state.update_data(parts_item_name=message.text.strip())
+    await state.set_state(MasterUpdateParts.waiting_for_amount)
+    await message.answer(
+        "2️⃣ Narxini kiriting (so'm):\n(masalan: 3000)",
+        parse_mode="HTML",
+    )
+
+
 @router.message(MasterUpdateParts.waiting_for_amount)
-async def master_add_parts_amount(message: Message, state: FSMContext, db_user: dict):
+async def master_add_parts_amount(message: Message, state: FSMContext):
     if _cancel_check(message.text):
         await _cancel(message, state); return
     amount = _parse_amount(message.text)
     if amount is None or amount <= 0:
-        await message.answer("❗ 0 dan katta raqam kiriting (masalan: 50000):")
+        await message.answer("❗ 0 dan katta raqam kiriting (masalan: 3000):")
         return
+    await state.update_data(parts_amount=amount)
+    await state.set_state(MasterUpdateParts.waiting_for_receipt)
+    await message.answer(
+        "3️⃣ <b>Chek rasmini</b> yuboring yoki /skip:\n"
+        "(chek/kvitansiya rasmini yuklang)",
+        parse_mode="HTML",
+    )
+
+
+@router.message(MasterUpdateParts.waiting_for_receipt)
+async def master_add_parts_receipt(message: Message, state: FSMContext, db_user: dict):
+    if _cancel_check(message.text):
+        await _cancel(message, state); return
+
+    receipt_file_id = None
+    if message.text and message.text.strip() == "/skip":
+        pass
+    elif message.photo:
+        receipt_file_id = message.photo[-1].file_id
+    elif not message.text:
+        await message.answer("Rasm yuboring yoki /skip:"); return
+    else:
+        await message.answer("Rasm yuboring yoki /skip:"); return
+
     data = await state.get_data()
     order_number = data["parts_order_number"]
+    order_id = data["parts_order_id"]
+    item_name = data["parts_item_name"]
+    amount = data["parts_amount"]
     await state.clear()
     try:
+        await create_order_expense(
+            order_id=order_id,
+            item_name=item_name,
+            amount=amount,
+            receipt_file_id=receipt_file_id,
+            added_by=db_user["id"],
+        )
         await update_parts_cost(order_number, amount, changed_by=db_user["id"])
         order = dict(await get_order_detail(order_number))
         new_total = int(order.get("parts_cost") or 0)
-        confirmed = bool(order.get("client_confirmed"))
         await message.answer(
-            f"✅ <b>{order_number}</b> — qismlar narxi yangilandi!\n\n"
-            f"Qo'shilgan: <b>+{amount:,} so'm</b>\n"
-            f"Jami qismlar narxi: <b>{new_total:,} so'm</b>",
+            f"✅ <b>{order_number}</b> — xarajat qo'shildi!\n\n"
+            f"📦 {item_name}: <b>{amount:,} so'm</b>\n"
+            f"{'📷 Chek saqlandi' if receipt_file_id else ''}\n"
+            f"Jami xarajat: <b>{new_total:,} so'm</b>",
             parse_mode="HTML",
             reply_markup=get_main_keyboard("master"),
         )
     except Exception:
-        logger.exception("Failed to update parts cost for %s", order_number)
+        logger.exception("Failed to add expense for %s", order_number)
         await message.answer("❌ Xato yuz berdi.", reply_markup=get_main_keyboard("master"))
 
 

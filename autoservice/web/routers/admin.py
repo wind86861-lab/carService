@@ -19,11 +19,14 @@ from bot.database.models import (
     get_broadcasts,
     get_client_profile,
     get_dashboard_stats,
+    get_expenses_by_order,
     get_feedback_stats,
     get_financial_report,
     get_master_profile,
     get_order_by_number,
     get_order_detail,
+    get_order_logs,
+    get_photos_by_order,
     get_visits_by_plate,
     set_user_role,
     unblock_user,
@@ -77,7 +80,25 @@ async def admin_get_order(order_number: str, _admin=Depends(require_admin)):
     detail = await get_order_detail(order_number)
     if not detail:
         raise HTTPException(status_code=404, detail="Order not found")
-    return detail
+    order = dict(detail)
+    from web.utils.photos import get_photo_url
+    logs = await get_order_logs(order["id"])
+    order["logs"] = [dict(l) for l in logs]
+    photos = await get_photos_by_order(order["id"])
+    order["photos"] = [
+        {"id": p["id"], "file_id": p["file_id"], "url": get_photo_url(p["file_id"]), "uploaded_at": p["uploaded_at"]}
+        for p in photos
+    ]
+    expenses = await get_expenses_by_order(order["id"])
+    order["expenses"] = [
+        {
+            "id": e["id"], "item_name": e["item_name"], "amount": float(e["amount"]),
+            "receipt_url": get_photo_url(e["receipt_file_id"]) if e.get("receipt_file_id") else None,
+            "added_by_name": e.get("added_by_name"), "created_at": e["created_at"],
+        }
+        for e in expenses
+    ]
+    return order
 
 
 @router.patch("/orders/{order_number}/force-close")

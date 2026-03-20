@@ -39,6 +39,17 @@ async def save_upload_file(file: UploadFile) -> str:
     return filename
 
 
+def is_telegram_file_id(value: str) -> bool:
+    """Return True if value looks like a Telegram file_id (not a local filename)."""
+    if not value:
+        return False
+    # Local files have extensions; Telegram file_ids are long base64-like strings with no extension
+    from pathlib import Path
+    return not Path(value).suffix
+
+
 def get_photo_url(filename: str) -> str:
-    """Return the public URL for a stored photo."""
+    """Return the public URL for a stored photo or a Telegram file_id proxy URL."""
+    if is_telegram_file_id(filename):
+        return f"{WEB_URL}/tg-photo/{filename}"
     return f"{WEB_URL}/uploads/{filename}"

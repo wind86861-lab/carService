@@ -10,6 +10,8 @@ from bot.database.models import (
     count_photos,
     create_car,
     create_order,
+    create_order_expense,
+    get_expenses_by_order,
     get_next_order_number,
     get_order_by_number,
     get_order_detail,
@@ -17,6 +19,7 @@ from bot.database.models import (
     get_orders_by_master,
     get_photos_by_order,
     update_order_status,
+    update_parts_cost,
 )
 from web.auth import require_master
 from web.schemas import (
@@ -88,6 +91,15 @@ async def get_order(order_number: str, master=Depends(require_master)):
     order["photos"] = [
         {"id": p["id"], "file_id": p["file_id"], "url": get_photo_url(p["file_id"]), "uploaded_at": p["uploaded_at"]}
         for p in photos
+    ]
+    expenses = await get_expenses_by_order(order["id"])
+    order["expenses"] = [
+        {
+            "id": e["id"], "item_name": e["item_name"], "amount": float(e["amount"]),
+            "receipt_url": get_photo_url(e["receipt_file_id"]) if e.get("receipt_file_id") else None,
+            "added_by_name": e.get("added_by_name"), "created_at": e["created_at"],
+        }
+        for e in expenses
     ]
     return order
 
@@ -211,6 +223,29 @@ async def list_photos(order_number: str, master=Depends(require_master)):
         {"id": p["id"], "file_id": p["file_id"], "url": get_photo_url(p["file_id"]), "uploaded_at": p["uploaded_at"]}
         for p in photos
     ]
+
+
+@router.post("/orders/{order_number}/expenses", status_code=201)
+async def add_expense(
+    order_number: str,
+    item_name: str,
+    amount: float,
+    master=Depends(require_master),
+):
+    order = await get_order_by_number(order_number)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order["status"] == "closed":
+        raise HTTPException(status_code=400, detail="Cannot add expense to a closed order")
+    await create_order_expense(
+        order_id=order["id"],
+        item_name=item_name,
+        amount=int(amount),
+        added_by=master["id"],
+    )
+    await update_parts_cost(order_number, int(amount), changed_by=master["id"])
+    updated = await get_order_by_number(order_number)
+    return {"parts_cost": float(updated["parts_cost"])}
 
 
 @router.post("/orders/{order_number}/payment")

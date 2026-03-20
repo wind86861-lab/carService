@@ -45,12 +45,39 @@ app.include_router(financials.router, prefix="/api")
 app.include_router(admin.router)
 
 from datetime import datetime, timezone
-from fastapi.responses import JSONResponse
+import httpx
+from fastapi.responses import JSONResponse, StreamingResponse
 
 
 @app.get("/api/health")
 async def health():
     return JSONResponse({"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat(), "version": "1.0.0"})
+
+
+@app.get("/tg-photo/{file_id:path}")
+async def telegram_photo_proxy(file_id: str):
+    """Proxy a Telegram photo by file_id — downloads from Telegram and streams to browser."""
+    from web.config import BOT_TOKEN
+    if not BOT_TOKEN:
+        return JSONResponse({"error": "Bot token not configured"}, status_code=503)
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
+                params={"file_id": file_id},
+            )
+            data = resp.json()
+            if not data.get("ok"):
+                return JSONResponse({"error": "File not found"}, status_code=404)
+            file_path = data["result"]["file_path"]
+            photo_resp = await client.get(
+                f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+            )
+            content_type = photo_resp.headers.get("content-type", "image/jpeg")
+            return StreamingResponse(iter([photo_resp.content]), media_type=content_type)
+    except Exception:
+        logger.exception("Failed to proxy Telegram photo %s", file_id)
+        return JSONResponse({"error": "Failed to fetch photo"}, status_code=502)
 
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")

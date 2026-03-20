@@ -114,6 +114,18 @@ RUN_MIGRATIONS_SQL = [
     text("CREATE INDEX IF NOT EXISTS idx_orders_client_id   ON orders(client_id);"),
     text("CREATE INDEX IF NOT EXISTS idx_orders_status      ON orders(status);"),
     text("CREATE INDEX IF NOT EXISTS idx_cars_plate         ON cars(plate);"),
+    text("""
+        CREATE TABLE IF NOT EXISTS order_expenses (
+            id          SERIAL PRIMARY KEY,
+            order_id    INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+            item_name   TEXT NOT NULL,
+            amount      NUMERIC NOT NULL DEFAULT 0,
+            receipt_file_id TEXT,
+            added_by    INTEGER REFERENCES users(id),
+            created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+    """),
+    text("CREATE INDEX IF NOT EXISTS idx_expenses_order_id ON order_expenses(order_id);"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -654,6 +666,40 @@ async def add_payment(order_number: str, amount, changed_by: int | None = None):
                         "by": changed_by,
                     },
                 )
+
+
+async def create_order_expense(
+    order_id: int,
+    item_name: str,
+    amount: int,
+    receipt_file_id: str | None = None,
+    added_by: int | None = None,
+) -> int:
+    """Insert an expense row for an order. Returns new expense id."""
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(
+                text(
+                    "INSERT INTO order_expenses (order_id, item_name, amount, receipt_file_id, added_by) "
+                    "VALUES (:oid, :name, :amt, :rfid, :by) RETURNING id"
+                ),
+                {"oid": order_id, "name": item_name, "amt": amount, "rfid": receipt_file_id, "by": added_by},
+            )
+            return result.scalar_one()
+
+
+async def get_expenses_by_order(order_id: int):
+    """Return all expense rows for an order, oldest first."""
+    async with async_session() as session:
+        result = await session.execute(
+            text(
+                "SELECT e.*, u.full_name AS added_by_name "
+                "FROM order_expenses e LEFT JOIN users u ON u.id = e.added_by "
+                "WHERE e.order_id = :oid ORDER BY e.created_at ASC"
+            ),
+            {"oid": order_id},
+        )
+        return result.mappings().all()
 
 
 async def update_parts_cost(order_number: str, add_amount: int, changed_by: int | None = None):
