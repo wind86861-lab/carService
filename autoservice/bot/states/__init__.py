@@ -37,3 +37,15 @@ class AdminCreateMaster(StatesGroup):
 class AdminNewMaster(StatesGroup):
     waiting_for_username = State()
     waiting_for_password = State()
+
+
+class MasterCreateOrder(StatesGroup):
+    waiting_for_brand = State()
+    waiting_for_model = State()
+    waiting_for_plate = State()
+    waiting_for_color = State()
+    waiting_for_year = State()
+    waiting_for_client_name = State()
+    waiting_for_client_phone = State()
+    waiting_for_problem = State()
+    waiting_for_confirm = State()

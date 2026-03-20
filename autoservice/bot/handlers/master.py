@@ -2,11 +2,14 @@ import logging
 import math
 
 from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from bot.config import WEB_URL
 from bot.database.models import (
+    create_car,
+    create_order,
     get_financial_summary_by_master,
+    get_next_order_number,
     get_order_detail,
     get_orders_by_master,
     update_order_status,
@@ -15,7 +18,8 @@ from bot.keyboards.inline import (
     get_master_order_detail_keyboard,
     get_master_order_list_keyboard,
 )
-from bot.keyboards.reply import get_main_keyboard
+from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
+from bot.states import MasterCreateOrder
 from bot.utils.formatters import format_datetime, format_money, format_order_status
 
 logger = logging.getLogger(__name__)
@@ -27,17 +31,175 @@ _ACTIVE = ["new", "preparation", "in_process", "ready"]
 
 
 # ---------------------------------------------------------------------------
-# New Order (web redirect)
+# New Order — full FSM flow in Telegram
 # ---------------------------------------------------------------------------
 
 @router.message(F.text == "🆕 Yangi buyurtma")
-async def master_new_order_handler(message: Message, db_user: dict):
-    url = f"{WEB_URL}/new-order"
+async def master_new_order_handler(message: Message, db_user: dict, state: FSMContext):
+    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
+        return
+    await state.set_state(MasterCreateOrder.waiting_for_brand)
     await message.answer(
-        f"🆕 <b>Yangi buyurtma yaratish</b>\n\nYangi buyurtma yaratish uchun veb panelni oching:\n{url}",
+        "🆕 <b>Yangi buyurtma</b>\n\n1️⃣ Mashina <b>markasini</b> kiriting:\n(masalan: Chevrolet, Nexia, Matiz)",
         parse_mode="HTML",
-        disable_web_page_preview=True,
+        reply_markup=get_cancel_keyboard(),
     )
+
+
+@router.message(MasterCreateOrder.waiting_for_brand)
+async def master_order_brand(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    await state.update_data(brand=message.text.strip())
+    await state.set_state(MasterCreateOrder.waiting_for_model)
+    await message.answer("2️⃣ Mashina <b>modelini</b> kiriting:\n(masalan: Lacetti, 5-3, 3)", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_model)
+async def master_order_model(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    await state.update_data(model=message.text.strip())
+    await state.set_state(MasterCreateOrder.waiting_for_plate)
+    await message.answer("3️⃣ Davlat <b>raqamini</b> kiriting:\n(masalan: 01A123BB)", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_plate)
+async def master_order_plate(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    await state.update_data(plate=message.text.strip().upper())
+    await state.set_state(MasterCreateOrder.waiting_for_color)
+    await message.answer("4️⃣ Mashina <b>rangini</b> kiriting yoki /skip:", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_color)
+async def master_order_color(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    color = None if message.text.strip() == "/skip" else message.text.strip()
+    await state.update_data(color=color)
+    await state.set_state(MasterCreateOrder.waiting_for_year)
+    await message.answer("5️⃣ Ishlab chiqarilgan <b>yilini</b> kiriting yoki /skip:", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_year)
+async def master_order_year(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    txt = message.text.strip()
+    year = None
+    if txt != "/skip":
+        if txt.isdigit() and 1900 < int(txt) < 2100:
+            year = int(txt)
+        else:
+            await message.answer("❗ To'g'ri yil kiriting (masalan: 2018) yoki /skip")
+            return
+    await state.update_data(year=year)
+    await state.set_state(MasterCreateOrder.waiting_for_client_name)
+    await message.answer("6️⃣ Mijozning <b>ismi</b>:", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_client_name)
+async def master_order_client_name(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    await state.update_data(client_name=message.text.strip())
+    await state.set_state(MasterCreateOrder.waiting_for_client_phone)
+    await message.answer("7️⃣ Mijozning <b>telefon raqami</b> yoki /skip:", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_client_phone)
+async def master_order_client_phone(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    phone = None if message.text.strip() == "/skip" else message.text.strip()
+    await state.update_data(client_phone=phone)
+    await state.set_state(MasterCreateOrder.waiting_for_problem)
+    await message.answer("8️⃣ <b>Muammo/vazifa</b> tavsifini kiriting:", parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_problem)
+async def master_order_problem(message: Message, state: FSMContext):
+    if message.text == "❌ Bekor qilish":
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    await state.update_data(problem=message.text.strip())
+    data = await state.get_data()
+    await state.set_state(MasterCreateOrder.waiting_for_confirm)
+    summary = (
+        "✅ <b>Buyurtmani tasdiqlang:</b>\n\n"
+        f"🚗 Mashina:  <b>{data['brand']} {data['model']}</b>\n"
+        f"🔢 Raqam:   <b>{data['plate']}</b>\n"
+        f"🎨 Rang:    {data.get('color') or '—'}\n"
+        f"📅 Yil:     {data.get('year') or '—'}\n"
+        f"👤 Mijoz:   <b>{data['client_name']}</b>\n"
+        f"📞 Tel:     {data.get('client_phone') or '—'}\n"
+        f"🔧 Muammo: {data['problem']}\n\n"
+        "Tasdiqlash uchun <b>Ha</b>, bekor qilish uchun <b>Yo'q</b> yuboring."
+    )
+    await message.answer(summary, parse_mode="HTML")
+
+
+@router.message(MasterCreateOrder.waiting_for_confirm)
+async def master_order_confirm(message: Message, state: FSMContext, db_user: dict):
+    if message.text == "❌ Bekor qilish" or message.text.lower() in ("yo'q", "yoq", "no", "n"):
+        await state.clear()
+        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("master"))
+        return
+    if message.text.lower() not in ("ha", "yes", "y", "ok", "+"):
+        await message.answer("Tasdiqlash uchun <b>Ha</b>, bekor qilish uchun <b>Yo'q</b> yuboring.", parse_mode="HTML")
+        return
+    data = await state.get_data()
+    await state.clear()
+    try:
+        order_number = await get_next_order_number()
+        car_id = await create_car(
+            order_number=order_number,
+            brand=data["brand"],
+            model=data["model"],
+            plate=data["plate"],
+            color=data.get("color") or "",
+            year=data.get("year") or 0,
+        )
+        await create_order(
+            order_number=order_number,
+            car_id=car_id,
+            master_id=db_user["id"],
+            client_name=data["client_name"],
+            client_phone=data.get("client_phone") or "",
+            problem=data["problem"],
+            work_desc="",
+            agreed_price=0,
+            paid_amount=0,
+        )
+        await message.answer(
+            f"✅ <b>Buyurtma yaratildi!</b>\n\n"
+            f"Buyurtma raqami: <b>{order_number}</b>\n"
+            f"Mashina: {data['brand']} {data['model']} | {data['plate']}\n"
+            f"Mijoz: {data['client_name']}\n"
+            f"Muammo: {data['problem']}",
+            parse_mode="HTML",
+            reply_markup=get_main_keyboard("master"),
+        )
+    except Exception:
+        logger.exception("Failed to create order")
+        await message.answer("❌ Buyurtma yaratishda xato yuz berdi.", reply_markup=get_main_keyboard("master"))
 
 
 # ---------------------------------------------------------------------------
