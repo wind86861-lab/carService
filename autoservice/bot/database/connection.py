@@ -13,9 +13,14 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 
 async def init_db():
-    """Run migration SQL to create all tables if they do not exist."""
+    """Run migration SQL to create all tables if they do not exist.
+    Uses a PostgreSQL advisory lock (key=42) so that web and bot
+    containers never run migrations concurrently and deadlock.
+    """
     from bot.database.models import RUN_MIGRATIONS_SQL
+    from sqlalchemy import text
     async with engine.begin() as conn:
+        await conn.execute(text("SELECT pg_advisory_xact_lock(42)"))
         for statement in RUN_MIGRATIONS_SQL:
             await conn.execute(statement)
 
