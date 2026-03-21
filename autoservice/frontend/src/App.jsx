@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import axios from 'axios'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import NewOrder from './pages/NewOrder'
@@ -27,12 +28,32 @@ export function useAuth() {
 function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('token'))
   const [role, setRole] = useState(() => localStorage.getItem('role'))
+  const [verified, setVerified] = useState(false)
+
+  useEffect(() => {
+    const t = localStorage.getItem('token')
+    if (!t) { setVerified(true); return }
+    axios.get('/api/profile', { headers: { Authorization: `Bearer ${t}` } })
+      .then(res => {
+        setRole(res.data.role)
+        localStorage.setItem('role', res.data.role)
+        setVerified(true)
+      })
+      .catch(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('role')
+        setToken(null)
+        setRole(null)
+        setVerified(true)
+      })
+  }, [])
 
   const login = (newToken, newRole) => {
     localStorage.setItem('token', newToken)
     localStorage.setItem('role', newRole)
     setToken(newToken)
     setRole(newRole)
+    setVerified(true)
   }
 
   const logout = () => {
@@ -42,6 +63,10 @@ function AuthProvider({ children }) {
     setRole(null)
   }
 
+  if (!verified) {
+    return <div className="min-h-screen flex items-center justify-center text-gray-400">Yuklanmoqda…</div>
+  }
+
   return (
     <AuthContext.Provider value={{ token, role, login, logout }}>
       {children}
@@ -49,14 +74,16 @@ function AuthProvider({ children }) {
   )
 }
 
-function ProtectedRoute({ children }) {
-  const { token } = useAuth()
-  return token ? children : <Navigate to="/login" replace />
+function MasterRoute({ children }) {
+  const { token, role } = useAuth()
+  if (!token) return <Navigate to="/login" replace />
+  if (role === 'admin') return <Navigate to="/admin" replace />
+  return children
 }
 
 function AdminRoute({ children }) {
   const { token, role } = useAuth()
-  if (!token) return <Navigate to="/login" replace />
+  if (!token) return <Navigate to="/admin/login" replace />
   if (role !== 'admin') return <Navigate to="/dashboard" replace />
   return children
 }
@@ -66,12 +93,13 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/new-order" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
-          <Route path="/orders/:orderNumber" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
-          <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/login" element={<Login mode="master" />} />
+          <Route path="/admin/login" element={<Login mode="admin" />} />
+          <Route path="/dashboard" element={<MasterRoute><Dashboard /></MasterRoute>} />
+          <Route path="/new-order" element={<MasterRoute><NewOrder /></MasterRoute>} />
+          <Route path="/orders/:orderNumber" element={<MasterRoute><OrderDetail /></MasterRoute>} />
+          <Route path="/statistics" element={<MasterRoute><Statistics /></MasterRoute>} />
+          <Route path="/profile" element={<MasterRoute><Profile /></MasterRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
           <Route path="/admin/orders/:orderNumber" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
@@ -83,7 +111,7 @@ export default function App() {
           <Route path="/admin/broadcast" element={<AdminRoute><AdminBroadcast /></AdminRoute>} />
           <Route path="/admin/feedbacks" element={<AdminRoute><AdminFeedbacks /></AdminRoute>} />
           <Route path="/admin/cars" element={<AdminRoute><AdminCarHistory /></AdminRoute>} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
