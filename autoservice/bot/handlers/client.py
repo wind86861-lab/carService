@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.types import FSInputFile
 from aiogram.fsm.context import FSMContext
 
-from bot.i18n import t, lang_of
+from bot.i18n import t, lang_of, all_variants
 from bot.states import ClientLinkOrder, ClientFeedback
 from bot.keyboards.reply import get_main_keyboard, get_cancel_keyboard
 from bot.keyboards.inline import (
@@ -72,19 +72,19 @@ async def _build_card(order, db_user: dict):
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "🔗 Buyurtmaga bog'lanish")
+@router.message(F.text.in_(all_variants("btn_link_order")))
 async def client_link_handler(message: Message, state: FSMContext, db_user: dict):
     lang = lang_of(db_user)
     await state.set_state(ClientLinkOrder.waiting_for_order_number)
-    await message.answer(t("enter_order_number", lang), reply_markup=get_cancel_keyboard())
+    await message.answer(t("enter_order_number", lang), reply_markup=get_cancel_keyboard(lang))
 
 
 @router.message(ClientLinkOrder.waiting_for_order_number)
 async def client_order_number_handler(message: Message, state: FSMContext, db_user: dict, bot: Bot):
     lang = lang_of(db_user)
-    if message.text and message.text.strip() == "❌ Bekor qilish":
+    if message.text and message.text.strip() in all_variants("btn_cancel"):
         await state.clear()
-        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("client"))
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("client", lang))
         return
     order_number = message.text.strip().upper() if message.text else ""
     order = await get_order_by_number(order_number)
@@ -96,7 +96,7 @@ async def client_order_number_handler(message: Message, state: FSMContext, db_us
     card, kb = await _build_card(order, db_user)
     await message.answer(t("car_linked_ok", lang))
     await message.answer(card, parse_mode="HTML", reply_markup=kb)
-    await message.answer("📱", reply_markup=get_main_keyboard("client"))
+    await message.answer("📱", reply_markup=get_main_keyboard("client", lang))
 
 
 # ------------------------------------------------------------------
@@ -104,13 +104,13 @@ async def client_order_number_handler(message: Message, state: FSMContext, db_us
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "🚗 Mashina holati")
+@router.message(F.text.in_(all_variants("btn_car_status")))
 async def client_status_handler(message: Message, db_user: dict):
     lang = lang_of(db_user)
     orders = await get_orders_by_client(db_user["id"])
     active = [o for o in (orders or []) if o["status"] not in ("closed", "cancelled")]
     if not active:
-        await message.answer(t("no_active_orders", lang), reply_markup=get_main_keyboard("client"))
+        await message.answer(t("no_active_orders", lang), reply_markup=get_main_keyboard("client", lang))
         return
     card, kb = await _build_card(active[0], db_user)
     await message.answer(card, parse_mode="HTML", reply_markup=kb)
@@ -121,12 +121,14 @@ async def client_status_handler(message: Message, db_user: dict):
 # ------------------------------------------------------------------
 
 
-@router.message(F.text == "📋 Mening buyurtmalarim", _is_client)
+@router.message(F.text.in_(all_variants("btn_my_orders")))
 async def client_my_orders_handler(message: Message, db_user: dict):
+    if not isinstance(db_user, dict) or db_user.get("role") != "client":
+        return
     lang = lang_of(db_user)
     orders = await get_orders_by_client(db_user["id"])
     if not orders:
-        await message.answer(t("no_orders", lang), reply_markup=get_main_keyboard("client"))
+        await message.answer(t("no_orders", lang), reply_markup=get_main_keyboard("client", lang))
         return
     page = orders[:PAGE_SIZE]
     lines = []
@@ -370,7 +372,7 @@ async def feedback_comment_handler(message: Message, state: FSMContext, db_user:
     if order_id:
         await create_feedback(order_id, db_user["id"], rating, category, message.text)
     await state.clear()
-    await message.answer(t("feedback_saved", lang), reply_markup=get_main_keyboard("client"))
+    await message.answer(t("feedback_saved", lang), reply_markup=get_main_keyboard("client", lang))
 
 
 # ------------------------------------------------------------------

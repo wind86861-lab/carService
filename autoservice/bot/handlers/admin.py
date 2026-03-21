@@ -17,6 +17,7 @@ from bot.database.models import (
     get_order_detail,
     unblock_user,
 )
+from bot.i18n import all_variants, lang_of, t
 from bot.keyboards.inline import (
     get_admin_confirm_keyboard,
     get_admin_order_detail_keyboard,
@@ -39,14 +40,20 @@ router = Router()
 
 PAGE_SIZE = 8
 
+_CANCEL_TEXTS = all_variants("btn_cancel")
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _require_admin(db_user: dict) -> bool:
     return db_user.get("role") == "admin"
 
+
+def _cancel_check(text: str) -> bool:
+    return text in _CANCEL_TEXTS
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
 
 async def _get_all_clients(search: str | None = None, page: int = 1):
     from sqlalchemy import text
@@ -210,24 +217,23 @@ async def _demote_user(user_id: int):
 # Dashboard
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "📊 Boshqaruv paneli")
+@router.message(F.text.in_(all_variants("btn_dashboard")))
 async def admin_dashboard_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     try:
         stats = await get_dashboard_stats()
-        text = (
-            "<b>📊 Boshqaruv paneli</b>\n\n"
-            f"🔄 Faol buyurtmalar: <b>{stats['active_orders']}</b>\n"
-            f"✅ Tayyor buyurtmalar: <b>{stats['ready_orders']}</b>\n\n"
-            f"💰 Shu oy daromad: <b>{format_money(stats['month_revenue'])}</b>\n"
-            f"📈 Shu oy foyda: <b>{format_money(stats['month_profit'])}</b>\n\n"
-            f"👤 Faol mijozlar: <b>{stats['total_clients']}</b>\n"
-            f"🔧 Faol ustalar: <b>{stats['total_masters']}</b>"
-        )
+        text = t("dashboard", lang,
+                 active=stats["active_orders"],
+                 ready=stats["ready_orders"],
+                 revenue=format_money(stats["month_revenue"]),
+                 profit=format_money(stats["month_profit"]),
+                 clients=stats["total_clients"],
+                 masters=stats["total_masters"])
     except Exception:
         logger.exception("Failed to load dashboard stats")
-        text = "❌ Statistikani yuklashda xato."
+        text = t("dashboard_error", lang)
     await message.answer(text, parse_mode="HTML")
 
 
@@ -235,37 +241,39 @@ async def admin_dashboard_handler(message: Message, db_user: dict):
 # Orders
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "📋 Barcha buyurtmalar")
+@router.message(F.text.in_(all_variants("btn_all_orders")))
 async def admin_all_orders_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     try:
         result = await get_all_orders(page=1, page_size=PAGE_SIZE)
         items = [dict(o) for o in result.get("items", [])]
         total = result.get("total", 0)
         total_pages = max(1, math.ceil(total / PAGE_SIZE))
         await message.answer(
-            f"📋 <b>Barcha buyurtmalar</b> ({total} ta) — Sahifa 1/{total_pages}",
+            t("all_orders_header", lang, total=total, page=1, total_pages=total_pages),
             parse_mode="HTML",
             reply_markup=get_admin_orders_keyboard(items, 1, total_pages),
         )
     except Exception:
         logger.exception("Failed to load orders list")
-        await message.answer("❌ Buyurtmalarni yuklashda xato.")
+        await message.answer(t("orders_load_error", lang))
 
 
 @router.callback_query(F.data.startswith("adm_orders_page:"))
 async def admin_orders_page_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     page = int(callback.data.split(":")[1])
     result = await get_all_orders(page=page, page_size=PAGE_SIZE)
     items = [dict(o) for o in result.get("items", [])]
     total = result.get("total", 0)
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
     await callback.message.edit_text(
-        f"📋 <b>Barcha buyurtmalar</b> ({total} ta) — Sahifa {page}/{total_pages}",
+        t("all_orders_header", lang, total=total, page=page, total_pages=total_pages),
         parse_mode="HTML",
         reply_markup=get_admin_orders_keyboard(items, page, total_pages),
     )
@@ -275,12 +283,13 @@ async def admin_orders_page_callback(callback: CallbackQuery, db_user: dict):
 @router.callback_query(F.data.startswith("adm_order_view:"))
 async def admin_order_view_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
     order = await get_order_detail(order_number)
     if not order:
-        await callback.answer("Buyurtma topilmadi.")
+        await callback.answer(t("order_search_none", lang))
         return
     order = dict(order)
     car = f"{order.get('brand','') or ''} {order.get('model','') or ''}".strip() or "—"
@@ -288,20 +297,20 @@ async def admin_order_view_callback(callback: CallbackQuery, db_user: dict):
     client = order.get("client_full_name") or order.get("client_name") or "—"
     txt = (
         f"📋 <b>{order['order_number']}</b>\n"
-        f"Holat: {format_order_status(order['status'])}\n"
-        f"Mashina: {car} | {order.get('plate','—')}\n"
-        f"Mijoz: {client}\n"
-        f"Usta: {master}\n"
-        f"Muammo: {order.get('problem') or '—'}\n"
-        f"Ish: {order.get('work_desc') or '—'}\n"
-        f"Narx: {format_money(order.get('agreed_price', 0))}\n"
-        f"Sana: {format_datetime(order.get('created_at'))}"
+        f"{t('order_lbl_status', lang)}: {format_order_status(order['status'], lang)}\n"
+        f"{t('order_lbl_car', lang)}: {car} | {order.get('plate','—')}\n"
+        f"{t('order_lbl_client', lang)}: {client}\n"
+        f"{t('order_lbl_master', lang)}: {master}\n"
+        f"{t('order_lbl_problem', lang)}: {order.get('problem') or '—'}\n"
+        f"{t('order_lbl_work', lang)}: {order.get('work_desc') or '—'}\n"
+        f"{t('order_lbl_price', lang)}: {format_money(order.get('agreed_price', 0))}\n"
+        f"{t('order_lbl_date', lang)}: {format_datetime(order.get('created_at'))}"
     )
     if order.get("status") == "closed":
         txt += (
-            f"\n💰 Qismlar: {format_money(order.get('parts_cost', 0))}\n"
-            f"Foyda: {format_money(order.get('profit', 0))}\n"
-            f"Yopilgan: {format_datetime(order.get('closed_at'))}"
+            f"\n💰 {t('order_lbl_parts', lang)}: {format_money(order.get('parts_cost', 0))}\n"
+            f"{t('order_lbl_profit', lang)}: {format_money(order.get('profit', 0))}\n"
+            f"{t('order_lbl_closed_at', lang)}: {format_datetime(order.get('closed_at'))}"
         )
     await callback.message.edit_text(
         txt, parse_mode="HTML",
@@ -313,12 +322,13 @@ async def admin_order_view_callback(callback: CallbackQuery, db_user: dict):
 @router.callback_query(F.data == "adm_order_search")
 async def admin_order_search_start(callback: CallbackQuery, db_user: dict, state: FSMContext):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     await state.set_state(AdminSearch.waiting_for_order)
     await callback.message.answer(
-        "🔍 Buyurtma raqami, davlat raqami yoki mijoz ismini kiriting:",
-        reply_markup=get_cancel_keyboard(),
+        t("order_search_prompt", lang),
+        reply_markup=get_cancel_keyboard(lang),
     )
     await callback.answer()
 
@@ -326,14 +336,15 @@ async def admin_order_search_start(callback: CallbackQuery, db_user: dict, state
 @router.callback_query(F.data == "adm_orders_back")
 async def admin_orders_back_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     result = await get_all_orders(page=1, page_size=PAGE_SIZE)
     items = [dict(o) for o in result.get("items", [])]
     total = result.get("total", 0)
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
     await callback.message.edit_text(
-        f"📋 <b>Barcha buyurtmalar</b> ({total} ta) — Sahifa 1/{total_pages}",
+        t("all_orders_header", lang, total=total, page=1, total_pages=total_pages),
         parse_mode="HTML",
         reply_markup=get_admin_orders_keyboard(items, 1, total_pages),
     )
@@ -342,36 +353,38 @@ async def admin_orders_back_callback(callback: CallbackQuery, db_user: dict):
 
 @router.message(AdminSearch.waiting_for_order)
 async def admin_order_search_handler(message: Message, state: FSMContext, db_user: dict):
-    if message.text == "❌ Bekor qilish":
+    lang = lang_of(db_user)
+    if _cancel_check(message.text):
         await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     await state.clear()
     orders = await _search_orders(message.text.strip())
     if not orders:
-        await message.answer("❌ Buyurtma topilmadi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("order_search_none", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     for o in orders:
         car = f"{o.get('brand','') or ''} {o.get('model','') or ''}".strip() or "—"
         txt = (
             f"<b>{o['order_number']}</b> | {car} | {o.get('plate','—')}\n"
-            f"Holat: {format_order_status(o['status'])} | {format_money(o.get('agreed_price',0))}\n"
-            f"Mijoz: {o.get('client_name','—')} | Usta: {o.get('master_name','—')}\n"
-            f"Sana: {format_datetime(o['created_at'])}"
+            f"{t('order_lbl_status', lang)}: {format_order_status(o['status'], lang)} | {format_money(o.get('agreed_price',0))}\n"
+            f"{t('order_lbl_client', lang)}: {o.get('client_name','—')} | {t('order_lbl_master', lang)}: {o.get('master_name','—')}\n"
+            f"{t('order_lbl_date', lang)}: {format_datetime(o['created_at'])}"
         )
         await message.answer(txt, parse_mode="HTML",
                              reply_markup=get_admin_order_keyboard(o["order_number"], o["status"]))
-    await message.answer("✅ Qidiruv tugadi.", reply_markup=get_main_keyboard("admin"))
+    await message.answer(t("order_search_done", lang), reply_markup=get_main_keyboard("admin", lang))
 
 
 @router.callback_query(F.data.startswith("adm_force_close:"))
 async def admin_force_close_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
     await callback.message.edit_text(
-        f"⚠️ <b>{order_number}</b> buyurtmani majburiy yopasizmi?\n\nIltimos web panel orqali qisimlar narxini kiriting:\n{WEB_URL}/admin/orders",
+        t("force_close_confirm", lang, order_number=order_number, web_url=WEB_URL),
         parse_mode="HTML",
         reply_markup=get_admin_confirm_keyboard("force_close", order_number),
     )
@@ -382,43 +395,44 @@ async def admin_force_close_callback(callback: CallbackQuery, db_user: dict):
 # Clients
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "👥 Mijozlar")
+@router.message(F.text.in_(all_variants("btn_clients")))
 async def admin_clients_handler(message: Message, db_user: dict, state: FSMContext):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     await state.set_state(AdminSearch.waiting_for_client)
     await message.answer(
-        "👥 <b>Mijozlarni qidirish</b>\n\n"
-        "Ism yoki telefon raqamini kiriting, yoki barcha mijozlar uchun <b>.</b> yuboring:",
+        t("clients_search_prompt", lang),
         parse_mode="HTML",
-        reply_markup=get_cancel_keyboard(),
+        reply_markup=get_cancel_keyboard(lang),
     )
 
 
 @router.message(AdminSearch.waiting_for_client)
 async def admin_client_search_handler(message: Message, state: FSMContext, db_user: dict):
-    if message.text == "❌ Bekor qilish":
+    lang = lang_of(db_user)
+    if _cancel_check(message.text):
         await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     await state.clear()
     query = message.text.strip()
     search = None if query == "." else query
     clients, total = await _get_all_clients(search=search, page=1)
     if not clients:
-        await message.answer("❌ Mijoz topilmadi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("no_clients", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
-    lines = [f"👥 <b>Mijozlar</b> ({total} ta):\n"]
+    lines = [t("clients_header", lang, total=total) + "\n"]
     for c in clients:
         status = "✅" if c["is_active"] else "🚫"
         lines.append(f"{status} <b>{c['full_name']}</b> | {c.get('phone','—')} | /client_{c['id']}")
     if total_pages > 1:
-        lines.append(f"\nSahifa 1/{total_pages}")
+        lines.append(f"\n{t('order_lbl_date', lang)} 1/{total_pages}")
     await message.answer(
         "\n".join(lines),
         parse_mode="HTML",
-        reply_markup=get_admin_page_keyboard(1, total_pages, f"clients:{search or ''}") if total_pages > 1 else get_main_keyboard("admin"),
+        reply_markup=get_admin_page_keyboard(1, total_pages, f"clients:{search or ''}") if total_pages > 1 else get_main_keyboard("admin", lang),
     )
 
 
@@ -426,23 +440,23 @@ async def admin_client_search_handler(message: Message, state: FSMContext, db_us
 async def admin_client_detail_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     user_id = int(message.text.split("_")[1])
     user = await _get_user_by_id(user_id)
     if not user:
-        await message.answer("❌ Mijoz topilmadi.")
+        await message.answer(t("client_not_found_adm", lang))
         return
     summary = await _get_user_orders_summary(user_id)
-    status = "✅ Faol" if user["is_active"] else "🚫 Bloklangan"
-    text = (
-        f"👤 <b>{user['full_name']}</b>\n"
-        f"Holat: {status}\n"
-        f"Telefon: {user.get('phone') or '—'}\n"
-        f"Telegram ID: <code>{user['telegram_id']}</code>\n"
-        f"Username: {user.get('username') or '—'}\n\n"
-        f"📋 Jami buyurtmalar: <b>{summary.get('total', 0)}</b>\n"
-        f"✅ Yopilgan: <b>{summary.get('closed', 0)}</b>\n"
-        f"💰 Jami summa: <b>{format_money(summary.get('revenue', 0))}</b>"
-    )
+    status = t("status_active", lang) if user["is_active"] else t("status_blocked", lang)
+    text = t("client_detail", lang,
+             name=user["full_name"],
+             status=status,
+             phone=user.get("phone") or "—",
+             tg_id=user["telegram_id"],
+             username=user.get("username") or "—",
+             total=summary.get("total", 0),
+             closed=summary.get("closed", 0),
+             revenue=format_money(summary.get("revenue", 0)))
     await message.answer(
         text,
         parse_mode="HTML",
@@ -454,25 +468,26 @@ async def admin_client_detail_handler(message: Message, db_user: dict):
 # Masters
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "🔧 Ustalar")
+@router.message(F.text.in_(all_variants("btn_masters")))
 async def admin_masters_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     result = await get_all_masters(page=1, page_size=PAGE_SIZE)
     masters = result.get("items", [])
     total = result.get("total", 0)
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
     if not masters:
-        await message.answer("🔧 Hech qanday usta topilmadi.")
+        await message.answer(t("no_masters_adm", lang))
         return
-    lines = [f"🔧 <b>Ustalar</b> ({total} ta):\n"]
+    lines = [t("masters_header", lang, total=total) + "\n"]
     for m in masters:
         status = "✅" if m.get("is_active") else "🚫"
         lines.append(f"{status} <b>{m['full_name']}</b> | {m.get('phone','—')} | /master_{m['id']}")
     await message.answer(
         "\n".join(lines),
         parse_mode="HTML",
-        reply_markup=get_admin_page_keyboard(1, total_pages, "masters") if total_pages > 1 else get_main_keyboard("admin"),
+        reply_markup=get_admin_page_keyboard(1, total_pages, "masters") if total_pages > 1 else get_main_keyboard("admin", lang),
     )
 
 
@@ -480,23 +495,23 @@ async def admin_masters_handler(message: Message, db_user: dict):
 async def admin_master_detail_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     user_id = int(message.text.split("_")[1])
     user = await _get_user_by_id(user_id)
     if not user:
-        await message.answer("❌ Usta topilmadi.")
+        await message.answer(t("master_not_found_adm", lang))
         return
     summary = await _get_user_orders_summary(user_id)
-    status = "✅ Faol" if user["is_active"] else "🚫 Bloklangan"
-    text = (
-        f"🔧 <b>{user['full_name']}</b>\n"
-        f"Holat: {status}\n"
-        f"Telefon: {user.get('phone') or '—'}\n"
-        f"Username: {user.get('username') or '—'}\n"
-        f"Telegram ID: <code>{user['telegram_id']}</code>\n\n"
-        f"📋 Jami buyurtmalar: <b>{summary.get('total', 0)}</b>\n"
-        f"✅ Yopilgan: <b>{summary.get('closed', 0)}</b>\n"
-        f"💰 Jami daromad: <b>{format_money(summary.get('revenue', 0))}</b>"
-    )
+    status = t("status_active", lang) if user["is_active"] else t("status_blocked", lang)
+    text = t("master_detail", lang,
+             name=user["full_name"],
+             status=status,
+             phone=user.get("phone") or "—",
+             username=user.get("username") or "—",
+             tg_id=user["telegram_id"],
+             total=summary.get("total", 0),
+             closed=summary.get("closed", 0),
+             revenue=format_money(summary.get("revenue", 0)))
     await message.answer(
         text,
         parse_mode="HTML",
@@ -511,8 +526,9 @@ async def admin_master_detail_handler(message: Message, db_user: dict):
 @router.callback_query(F.data.startswith("adm_page:"))
 async def admin_page_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     _, entity_raw, page_str = callback.data.split(":", 2)
     page = int(page_str)
     entity_parts = entity_raw.split(":", 1)
@@ -524,7 +540,7 @@ async def admin_page_callback(callback: CallbackQuery, db_user: dict):
         items = result.get("items", [])
         total = result.get("total", 0)
         total_pages = max(1, math.ceil(total / PAGE_SIZE))
-        lines = [f"🔧 <b>Ustalar</b> ({total} ta) — sahifa {page}/{total_pages}:\n"]
+        lines = [t("masters_header", lang, total=total) + f" — {page}/{total_pages}:\n"]
         for m in items:
             s = "✅" if m.get("is_active") else "🚫"
             lines.append(f"{s} <b>{m['full_name']}</b> | {m.get('phone','—')} | /master_{m['id']}")
@@ -536,7 +552,7 @@ async def admin_page_callback(callback: CallbackQuery, db_user: dict):
     elif entity == "clients":
         clients, total = await _get_all_clients(search=search or None, page=page)
         total_pages = max(1, math.ceil(total / PAGE_SIZE))
-        lines = [f"👥 <b>Mijozlar</b> ({total} ta) — sahifa {page}/{total_pages}:\n"]
+        lines = [t("clients_header", lang, total=total) + f" — {page}/{total_pages}:\n"]
         for c in clients:
             s = "✅" if c["is_active"] else "🚫"
             lines.append(f"{s} <b>{c['full_name']}</b> | {c.get('phone','—')} | /client_{c['id']}")
@@ -560,56 +576,61 @@ async def noop_callback(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("adm_block:"))
 async def admin_block_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     user_id = int(callback.data.split(":")[1])
     await callback.message.edit_reply_markup(
         reply_markup=get_admin_confirm_keyboard("block", str(user_id))
     )
-    await callback.answer("Tasdiqlang")
+    await callback.answer(t("confirm_action", lang))
 
 
 @router.callback_query(F.data.startswith("adm_unblock:"))
 async def admin_unblock_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     user_id = int(callback.data.split(":")[1])
     await callback.message.edit_reply_markup(
         reply_markup=get_admin_confirm_keyboard("unblock", str(user_id))
     )
-    await callback.answer("Tasdiqlang")
+    await callback.answer(t("confirm_action", lang))
 
 
 @router.callback_query(F.data.startswith("adm_promote:"))
 async def admin_promote_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     user_id = int(callback.data.split(":")[1])
     await callback.message.edit_reply_markup(
         reply_markup=get_admin_confirm_keyboard("promote", str(user_id))
     )
-    await callback.answer("Tasdiqlang")
+    await callback.answer(t("confirm_action", lang))
 
 
 @router.callback_query(F.data.startswith("adm_demote:"))
 async def admin_demote_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     user_id = int(callback.data.split(":")[1])
     await callback.message.edit_reply_markup(
         reply_markup=get_admin_confirm_keyboard("demote", str(user_id))
     )
-    await callback.answer("Tasdiqlang")
+    await callback.answer(t("confirm_action", lang))
 
 
 @router.callback_query(F.data.startswith("adm_confirm:"))
 async def admin_confirm_action_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     parts = callback.data.split(":")
     action = parts[1]
     target = parts[2]
@@ -617,47 +638,45 @@ async def admin_confirm_action_callback(callback: CallbackQuery, db_user: dict):
     try:
         if action == "block":
             await block_user(int(target))
-            await callback.message.edit_text(f"🚫 Foydalanuvchi #{target} bloklandi.")
+            await callback.message.edit_text(t("user_blocked_msg", lang, target=target))
         elif action == "unblock":
             await unblock_user(int(target))
-            await callback.message.edit_text(f"✅ Foydalanuvchi #{target} blokdan chiqarildi.")
+            await callback.message.edit_text(t("user_unblocked_msg", lang, target=target))
         elif action == "promote":
             result = await _promote_user(int(target))
-            msg = f"⬆️ Foydalanuvchi #{target} ustaga ko'tarildi."
+            msg = t("user_promoted_msg", lang, target=target)
             if result.get("password") and result.get("telegram_id"):
                 from bot.config import BOT_TOKEN
                 import httpx
-                creds_msg = (
-                    "Tabriklaymiz! Siz usta sifatida tayinlandingiz.\n\n"
-                    f"Web panelga kirish:\n{WEB_URL}/login\n\n"
-                    f"Username: {result['username']}\n"
-                    f"Password: {result['password']}\n\n"
-                    "Tizimga kirgach parolingizni o'zgartiring."
-                )
+                creds_msg = t("master_credentials_msg", lang,
+                              web_url=WEB_URL,
+                              username=result["username"],
+                              password=result["password"])
                 async with httpx.AsyncClient() as client:
                     await client.post(
                         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
                         json={"chat_id": result["telegram_id"], "text": creds_msg},
                         timeout=5.0,
                     )
-                msg += "\n✉️ Kirish ma'lumotlari Telegram orqali yuborildi."
+                msg += t("credentials_sent", lang)
             await callback.message.edit_text(msg)
         elif action == "demote":
             await _demote_user(int(target))
-            await callback.message.edit_text(f"⬇️ Usta #{target} mijozga tushirildi.")
+            await callback.message.edit_text(t("user_demoted_msg", lang, target=target))
         elif action == "force_close":
             await callback.message.edit_text(
-                f"⚠️ Majburiy yopish uchun web panelni oching:\n{WEB_URL}/admin/orders"
+                t("force_close_redirect", lang, web_url=WEB_URL)
             )
     except Exception:
         logger.exception("Admin confirm action failed: %s %s", action, target)
-        await callback.message.edit_text("❌ Xato yuz berdi.")
+        await callback.message.edit_text(t("action_error", lang))
     await callback.answer()
 
 
 @router.callback_query(F.data == "adm_cancel")
-async def admin_cancel_callback(callback: CallbackQuery):
-    await callback.message.edit_text("❌ Bekor qilindi.")
+async def admin_cancel_callback(callback: CallbackQuery, db_user: dict):
+    lang = lang_of(db_user)
+    await callback.message.edit_text(t("action_cancelled", lang))
     await callback.answer()
 
 
@@ -665,12 +684,13 @@ async def admin_cancel_callback(callback: CallbackQuery):
 # Financials
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "💰 Moliya")
+@router.message(F.text.in_(all_variants("btn_finance")))
 async def admin_financials_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     await message.answer(
-        "💰 <b>Moliya hisoboti</b>\n\nDavrni tanlang:",
+        t("financials_title", lang),
         parse_mode="HTML",
         reply_markup=get_admin_period_keyboard(),
     )
@@ -679,23 +699,28 @@ async def admin_financials_handler(message: Message, db_user: dict):
 @router.callback_query(F.data.startswith("adm_period:"))
 async def admin_period_callback(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     period = callback.data.split(":")[1]
-    labels = {"today": "Bugun", "week": "Hafta", "month": "Oy", "year": "Yil"}
+    period_labels = {
+        "today": t("period_today", lang),
+        "week": t("period_week", lang),
+        "month": t("period_month", lang),
+        "year": t("period_year", lang),
+    }
     try:
         data = await _get_financials(period)
-        text = (
-            f"💰 <b>Moliya hisoboti — {labels.get(period, period)}</b>\n\n"
-            f"📋 Buyurtmalar: <b>{data.get('orders', 0)}</b>\n"
-            f"💵 Daromad: <b>{format_money(data.get('revenue', 0))}</b>\n"
-            f"🔩 Qismlar: <b>{format_money(data.get('parts_cost', 0))}</b>\n"
-            f"📈 Foyda: <b>{format_money(data.get('profit', 0))}</b>\n"
-            f"🔧 Usta ulushi: <b>{format_money(data.get('master_share', 0))}</b>"
-        )
+        text = t("financials_report", lang,
+                 period=period_labels.get(period, period),
+                 orders=data.get("orders", 0),
+                 revenue=format_money(data.get("revenue", 0)),
+                 parts=format_money(data.get("parts_cost", 0)),
+                 profit=format_money(data.get("profit", 0)),
+                 master_share=format_money(data.get("master_share", 0)))
     except Exception:
         logger.exception("Failed to load financials")
-        text = "❌ Moliya ma'lumotlarini yuklashda xato."
+        text = t("financials_error", lang)
     await callback.message.edit_text(text, parse_mode="HTML", reply_markup=get_admin_period_keyboard())
     await callback.answer()
 
@@ -704,59 +729,62 @@ async def admin_period_callback(callback: CallbackQuery, db_user: dict):
 # Car History
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "🚗 Mashina tarixi")
+@router.message(F.text.in_(all_variants("btn_car_history")))
 async def admin_car_history_handler(message: Message, db_user: dict, state: FSMContext):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     await state.set_state(AdminSearch.waiting_for_plate)
     await message.answer(
-        "🚗 <b>Mashina tarixi</b>\n\nDavlat raqamini kiriting (masalan: 01A123BB):",
+        t("car_history_prompt", lang),
         parse_mode="HTML",
-        reply_markup=get_cancel_keyboard(),
+        reply_markup=get_cancel_keyboard(lang),
     )
 
 
 @router.message(AdminSearch.waiting_for_plate)
 async def admin_plate_search_handler(message: Message, state: FSMContext, db_user: dict):
-    if message.text == "❌ Bekor qilish":
+    lang = lang_of(db_user)
+    if _cancel_check(message.text):
         await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     await state.clear()
     orders = await _get_car_history(message.text.strip())
     if not orders:
         await message.answer(
-            f"❌ <b>{message.text.upper()}</b> raqamli mashina tarixida buyurtma topilmadi.",
+            t("car_not_found", lang, plate=message.text.upper()),
             parse_mode="HTML",
-            reply_markup=get_main_keyboard("admin"),
+            reply_markup=get_main_keyboard("admin", lang),
         )
         return
     plate = orders[0].get("plate", message.text.upper())
     brand = f"{orders[0].get('brand','') or ''} {orders[0].get('model','') or ''}".strip()
-    lines = [f"🚗 <b>{plate}</b> {brand} — {len(orders)} ta tashrif\n"]
+    lines = [t("car_history_header", lang, plate=plate, brand=brand, count=len(orders))]
     for o in orders:
         lines.append(
-            f"<b>{o['order_number']}</b> | {format_order_status(o['status'])}\n"
-            f"Muammo: {o.get('problem','—')}\n"
-            f"Ish: {o.get('work_desc','—')}\n"
-            f"Usta: {o.get('master_name','—')} | {format_money(o.get('agreed_price',0))}\n"
-            f"Sana: {format_datetime(o.get('created_at'))}\n"
+            f"<b>{o['order_number']}</b> | {format_order_status(o['status'], lang)}\n"
+            f"{t('order_lbl_problem', lang)}: {o.get('problem','—')}\n"
+            f"{t('order_lbl_work', lang)}: {o.get('work_desc','—')}\n"
+            f"{t('order_lbl_master', lang)}: {o.get('master_name','—')} | {format_money(o.get('agreed_price',0))}\n"
+            f"{t('order_lbl_date', lang)}: {format_datetime(o.get('created_at'))}\n"
         )
-    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=get_main_keyboard("admin"))
+    await message.answer("\n".join(lines), parse_mode="HTML", reply_markup=get_main_keyboard("admin", lang))
 
 
 # ---------------------------------------------------------------------------
 # Create Master
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "➕ Yangi usta")
+@router.message(F.text.in_(all_variants("btn_new_master")))
 async def admin_create_master_handler(message: Message, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     clients, total = await _get_all_clients(page=1)
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
     await message.answer(
-        f"👥 <b>Yangi usta uchun mijoz tanlang</b> ({total} ta)\nSahifa 1/{total_pages}:",
+        t("new_master_title", lang, total=total, page=1, total_pages=total_pages),
         parse_mode="HTML",
         reply_markup=get_clients_for_master_keyboard(clients, 1, total_pages),
     )
@@ -765,13 +793,14 @@ async def admin_create_master_handler(message: Message, db_user: dict):
 @router.callback_query(F.data.startswith("adm_nm_page:"))
 async def admin_new_master_clients_page(callback: CallbackQuery, db_user: dict):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     page = int(callback.data.split(":")[1])
     clients, total = await _get_all_clients(page=page)
     total_pages = max(1, math.ceil(total / PAGE_SIZE))
     await callback.message.edit_text(
-        f"👥 <b>Yangi usta uchun mijoz tanlang</b> ({total} ta)\nSahifa {page}/{total_pages}:",
+        t("new_master_title", lang, total=total, page=page, total_pages=total_pages),
         parse_mode="HTML",
         reply_markup=get_clients_for_master_keyboard(clients, page, total_pages),
     )
@@ -781,40 +810,43 @@ async def admin_new_master_clients_page(callback: CallbackQuery, db_user: dict):
 @router.callback_query(F.data.startswith("adm_pick_client:"))
 async def admin_pick_client_for_master(callback: CallbackQuery, db_user: dict, state: FSMContext):
     if not _require_admin(db_user):
-        await callback.answer("Ruxsat yo'q.")
+        await callback.answer(t("no_access", lang_of(db_user)))
         return
+    lang = lang_of(db_user)
     user_id = int(callback.data.split(":")[1])
     user = await _get_user_by_id(user_id)
     if not user:
-        await callback.answer("Mijoz topilmadi.")
+        await callback.answer(t("client_not_found_adm", lang))
         return
     await state.update_data(promote_user_id=user_id, promote_full_name=user["full_name"])
     await state.set_state(AdminNewMaster.waiting_for_username)
     await callback.message.edit_text(
-        f"👤 <b>{user['full_name']}</b> tanlandi.\n"
-        f"Telefon: {user.get('phone') or '—'}\n\n"
-        "Username kiriting (yoki /skip — avtomatik yaratiladi):",
+        t("new_master_selected", lang,
+          name=user["full_name"],
+          phone=user.get("phone") or "—"),
         parse_mode="HTML",
     )
     await callback.answer()
 
 
 @router.message(AdminNewMaster.waiting_for_username)
-async def admin_new_master_username_handler(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+async def admin_new_master_username_handler(message: Message, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
+    if _cancel_check(message.text):
         await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     await state.update_data(new_username=message.text.strip())
     await state.set_state(AdminNewMaster.waiting_for_password)
-    await message.answer("Parol kiriting (yoki /skip — avtomatik yaratiladi):")
+    await message.answer(t("new_master_pwd_prompt", lang))
 
 
 @router.message(AdminNewMaster.waiting_for_password)
-async def admin_new_master_password_handler(message: Message, state: FSMContext):
-    if message.text == "❌ Bekor qilish":
+async def admin_new_master_password_handler(message: Message, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
+    if _cancel_check(message.text):
         await state.clear()
-        await message.answer("Bekor qilindi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("admin", lang))
         return
     data = await state.get_data()
     await state.clear()
@@ -839,8 +871,8 @@ async def admin_new_master_password_handler(message: Message, state: FSMContext)
             existing = await session.execute(sqlt("SELECT id FROM users WHERE username=:u"), {"u": username})
             if existing.first():
                 await message.answer(
-                    f"❌ '{username}' username allaqachon mavjud. /skip yoki boshqa username bilan qayta urining.",
-                    reply_markup=get_main_keyboard("admin"),
+                    t("username_taken", lang, username=username),
+                    reply_markup=get_main_keyboard("admin", lang),
                 )
                 return
             pwd_hash = hash_password(password)
@@ -853,12 +885,10 @@ async def admin_new_master_password_handler(message: Message, state: FSMContext)
         if user and user.get("telegram_id"):
             from bot.config import BOT_TOKEN
             import httpx
-            creds = (
-                f"Tabriklaymiz! Siz usta sifatida tayinlandingiz.\n\n"
-                f"Web panelga kirish:\n{WEB_URL}/login\n\n"
-                f"Username: {username}\nPassword: {password}\n\n"
-                "Tizimga kirgach parolingizni o'zgartiring."
-            )
+            creds = t("master_credentials_msg", lang,
+                      web_url=WEB_URL,
+                      username=username,
+                      password=password)
             async with httpx.AsyncClient() as hc:
                 await hc.post(
                     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
@@ -866,84 +896,89 @@ async def admin_new_master_password_handler(message: Message, state: FSMContext)
                     timeout=5.0,
                 )
         await message.answer(
-            f"✅ <b>{full_name}</b> ustaga ko'tarildi!\n\n"
-            f"Username: <code>{username}</code>\n"
-            f"Parol: <code>{password}</code>\n"
-            f"Kirish: {WEB_URL}/login",
+            t("master_promoted_success", lang,
+              name=full_name,
+              username=username,
+              password=password,
+              web_url=WEB_URL),
             parse_mode="HTML",
-            reply_markup=get_main_keyboard("admin"),
+            reply_markup=get_main_keyboard("admin", lang),
         )
     except Exception:
         logger.exception("Failed to promote client to master")
-        await message.answer("❌ Xato yuz berdi.", reply_markup=get_main_keyboard("admin"))
+        await message.answer(t("master_promote_error", lang), reply_markup=get_main_keyboard("admin", lang))
 
 
 # ---------------------------------------------------------------------------
 # Broadcast
 # ---------------------------------------------------------------------------
 
-@router.message(F.text == "📢 Xabar yuborish")
+@router.message(F.text.in_(all_variants("btn_broadcast")))
 async def admin_broadcast_handler(message: Message, state: FSMContext, db_user: dict):
     if not _require_admin(db_user):
         return
+    lang = lang_of(db_user)
     await state.set_state(AdminBroadcast.waiting_for_target)
     await message.answer(
-        "📢 <b>Ommaviy xabar</b>\n\nMaqsadli auditoriyani tanlang:",
+        t("broadcast_title", lang),
         parse_mode="HTML",
         reply_markup=get_broadcast_target_keyboard(),
     )
 
 
 @router.callback_query(F.data.startswith("broadcast_target:"), AdminBroadcast.waiting_for_target)
-async def admin_broadcast_target_callback(callback: CallbackQuery, state: FSMContext):
+async def admin_broadcast_target_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     target = callback.data.split(":", 1)[1]
-    labels = {"all": "Barcha", "clients": "Faqat mijozlar", "masters": "Faqat ustalar"}
+    audience_keys = {"all": "audience_all", "clients": "audience_clients", "masters": "audience_masters"}
+    audience_label = t(audience_keys.get(target, "audience_all"), lang)
     await state.update_data(target=target)
     await state.set_state(AdminBroadcast.waiting_for_message)
     await callback.message.edit_text(
-        f"Auditoriya: <b>{labels.get(target, target)}</b>\n\nYubormoqchi bo'lgan xabarni kiriting:",
+        t("broadcast_audience_set", lang, audience=audience_label),
         parse_mode="HTML",
     )
     await callback.answer()
 
 
 @router.message(AdminBroadcast.waiting_for_message)
-async def admin_broadcast_message_handler(message: Message, state: FSMContext):
+async def admin_broadcast_message_handler(message: Message, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     await state.update_data(message_text=message.text)
     await state.set_state(AdminBroadcast.waiting_for_confirm)
     data = await state.get_data()
-    labels = {"all": "Barcha", "clients": "Faqat mijozlar", "masters": "Faqat ustalar"}
-    preview = (
-        f"📢 <b>Xabarni tasdiqlash</b>\n\n"
-        f"Auditoriya: <b>{labels.get(data['target'], data['target'])}</b>\n\n"
-        f"Xabar:\n<i>{message.text[:500]}</i>\n\n"
-        "Yuborasizmi?"
-    )
+    audience_keys = {"all": "audience_all", "clients": "audience_clients", "masters": "audience_masters"}
+    audience_label = t(audience_keys.get(data["target"], "audience_all"), lang)
+    preview = t("broadcast_preview", lang,
+                audience=audience_label,
+                text=message.text[:500])
     await message.answer(preview, parse_mode="HTML", reply_markup=get_broadcast_confirm_keyboard())
 
 
 @router.callback_query(F.data == "broadcast_confirm", AdminBroadcast.waiting_for_confirm)
 async def admin_broadcast_confirm_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     data = await state.get_data()
     await state.clear()
-    await callback.message.edit_text("⏳ Xabar yuborilmoqda…")
+    await callback.message.edit_text(t("broadcast_sending", lang))
     try:
         from web.utils.broadcast import send_broadcast
         result = await send_broadcast(data["target"], data["message_text"], db_user["id"])
         await callback.message.edit_text(
-            f"✅ <b>Xabar yuborildi!</b>\n\n"
-            f"Yetkazildi: <b>{result['sent_count']}</b>\n"
-            f"Xato: <b>{result['failed_count']}</b>",
+            t("broadcast_done", lang,
+              sent=result["sent_count"],
+              failed=result["failed_count"]),
             parse_mode="HTML",
         )
     except Exception:
         logger.exception("Broadcast failed")
-        await callback.message.edit_text("❌ Xabar yuborishda xato.")
+        await callback.message.edit_text(t("broadcast_error", lang))
     await callback.answer()
 
 
 @router.callback_query(F.data == "broadcast_cancel", AdminBroadcast.waiting_for_confirm)
-async def admin_broadcast_cancel_callback(callback: CallbackQuery, state: FSMContext):
+async def admin_broadcast_cancel_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
     await state.clear()
-    await callback.message.edit_text("❌ Bekor qilindi.")
+    await callback.message.edit_text(t("action_cancelled", lang))
     await callback.answer()

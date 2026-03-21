@@ -67,7 +67,7 @@ async def start_handler(message: Message, state: FSMContext, db_user: dict):
     role = db_user["role"]
     name = db_user["full_name"]
     key = f"welcome_{role}" if role in ("admin", "master") else "welcome_client"
-    await message.answer(t(key, lang, name=name), reply_markup=get_main_keyboard(role))
+    await message.answer(t(key, lang, name=name), reply_markup=get_main_keyboard(role, lang))
 
 
 @router.callback_query(F.data.startswith("set_lang:"))
@@ -83,13 +83,15 @@ async def set_language_callback(callback: CallbackQuery, state: FSMContext, db_u
         await state.set_state(Registration.waiting_for_phone)
         await callback.message.answer(
             t("ask_phone", lang),
-            reply_markup=get_phone_keyboard(),
+            reply_markup=get_phone_keyboard(lang),
         )
     else:
         # /language command outside registration — just confirm
+        role = db_user.get("role", "client")
+        key = f"welcome_{role}" if role in ("admin", "master") else "welcome_client"
         await callback.message.answer(
-            t("welcome_client", lang, name=db_user.get("full_name", "")),
-            reply_markup=get_main_keyboard(db_user.get("role", "client")),
+            t(key, lang, name=db_user.get("full_name", "")),
+            reply_markup=get_main_keyboard(role, lang),
         )
     await callback.answer()
 
@@ -106,7 +108,7 @@ async def phone_handler(message: Message, state: FSMContext, db_user: dict):
     role = db_user["role"]
     if pending_order:
         await _try_link_order(message, pending_order, db_user)
-    await message.answer(t("phone_saved", lang), reply_markup=get_main_keyboard(role))
+    await message.answer(t("phone_saved", lang), reply_markup=get_main_keyboard(role, lang))
 
 
 @router.message(Command("language"))

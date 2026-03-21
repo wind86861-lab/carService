@@ -1,5 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from bot.i18n import t
+
 
 def get_skip_inline() -> InlineKeyboardMarkup:
     """Return an inline keyboard with a single 'Skip' button."""
@@ -153,7 +155,7 @@ def get_admin_orders_keyboard(orders: list, page: int, total_pages: int) -> Inli
         nav.append(InlineKeyboardButton(text="➡️", callback_data=f"adm_orders_page:{page + 1}"))
     if nav:
         buttons.append(nav)
-    buttons.append([InlineKeyboardButton(text="🔍 Qidirish", callback_data="adm_order_search")])
+    buttons.append([InlineKeyboardButton(text="🔍", callback_data="adm_order_search")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -161,8 +163,8 @@ def get_admin_order_detail_keyboard(order_number: str, status: str) -> InlineKey
     """Order detail action buttons for admin."""
     buttons = []
     if status not in ("closed",):
-        buttons.append([InlineKeyboardButton(text="🔒 Majburiy yopish", callback_data=f"adm_force_close:{order_number}")])
-    buttons.append([InlineKeyboardButton(text="◀️ Orqaga", callback_data="adm_orders_back")])
+        buttons.append([InlineKeyboardButton(text="🔒 Force close", callback_data=f"adm_force_close:{order_number}")])
+    buttons.append([InlineKeyboardButton(text="◀️ Back", callback_data="adm_orders_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -184,10 +186,10 @@ def get_clients_for_master_keyboard(clients: list, page: int, total_pages: int) 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-_NEXT_STATUS = {
-    "new": ("preparation", "🔧 Tayyorlashga olish"),
-    "preparation": ("in_process", "⚙️ Ishga kirishish"),
-    "in_process": ("ready", "✅ Tayyor deb belgilash"),
+_NEXT_STATUS_KEY = {
+    "new": ("preparation", "🔧", "status_preparation"),
+    "preparation": ("in_process", "⚙️", "status_in_process"),
+    "in_process": ("ready", "✅", "status_ready"),
 }
 
 
@@ -212,32 +214,35 @@ def get_master_order_list_keyboard(orders: list, page: int = 1, total_pages: int
 
 def get_master_order_detail_keyboard(
     order_number: str, current_status: str, client_confirmed: bool = False,
-    has_client: bool = False,
+    has_client: bool = False, lang: str = "uz",
 ) -> InlineKeyboardMarkup:
     """Status change + parts cost + financial close + share + back button for a master's order."""
     from bot.config import BOT_USERNAME
     buttons = []
-    if current_status in _NEXT_STATUS:
-        next_st, next_label = _NEXT_STATUS[current_status]
+    if current_status in _NEXT_STATUS_KEY:
+        next_st, icon, label_key = _NEXT_STATUS_KEY[current_status]
+        next_label = f"{icon} {t(label_key, lang)}"
         buttons.append([InlineKeyboardButton(text=next_label, callback_data=f"mst_status:{order_number}:{next_st}")])
     if current_status not in ("closed", "ready"):
-        buttons.append([InlineKeyboardButton(text="🔩 Qismlar narxini qo'shish", callback_data=f"mst_add_parts:{order_number}")])
+        add_label = "🔩 Qismlar narxini qo'shish" if lang == "uz" else "🔩 Добавить запчасти"
+        buttons.append([InlineKeyboardButton(text=add_label, callback_data=f"mst_add_parts:{order_number}")])
     if current_status == "ready" and client_confirmed:
-        buttons.append([InlineKeyboardButton(text="💰 Moliyaviy hisobotni yopish", callback_data=f"mst_close:{order_number}")])
-    # Share deep-link button (always visible except closed orders)
+        close_label = "💰 Moliyaviy hisobotni yopish" if lang == "uz" else "💰 Закрыть финансово"
+        buttons.append([InlineKeyboardButton(text=close_label, callback_data=f"mst_close:{order_number}")])
     if current_status != "closed" and BOT_USERNAME:
         url = f"https://t.me/{BOT_USERNAME}?start={order_number}"
-        share_label = "✅ Mijoz bog'langan" if has_client else "📤 Mijozga havola"
+        share_label = t("share_btn_linked" if has_client else "share_btn", lang)
         buttons.append([InlineKeyboardButton(text=share_label, url=url)])
-    buttons.append([InlineKeyboardButton(text="◄️ Orqaga", callback_data="mst_orders_back")])
+    back_label = "◄️ Orqaga" if lang == "uz" else "◄️ Назад"
+    buttons.append([InlineKeyboardButton(text=back_label, callback_data="mst_orders_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def get_share_order_keyboard(order_number: str, has_client: bool = False) -> InlineKeyboardMarkup:
+def get_share_order_keyboard(order_number: str, has_client: bool = False, lang: str = "uz") -> InlineKeyboardMarkup:
     """Return inline keyboard with a URL deep-link button for sharing the order with a client."""
     from bot.config import BOT_USERNAME
     url = f"https://t.me/{BOT_USERNAME}?start={order_number}"
-    label = "✅ Mijoz bog'langan" if has_client else "📤 Mijozga havola yuborish"
+    label = t("share_btn_linked" if has_client else "share_btn", lang)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=label, url=url)],
     ])
