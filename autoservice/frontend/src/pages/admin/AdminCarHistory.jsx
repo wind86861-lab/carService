@@ -38,11 +38,11 @@ export default function AdminCarHistory() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         <h1 className="text-xl font-bold text-gray-900">Mashina tarixi</h1>
 
         <div className="card p-4">
-          <form onSubmit={handleSearch} className="flex gap-3">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
             <input
               className="input flex-1 font-mono uppercase"
               placeholder="Davlat raqamini kiriting (masalan: 01A123BB)"
@@ -83,7 +83,7 @@ export default function AdminCarHistory() {
                           </div>
                           <span className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(v.created_at)}</span>
                         </div>
-                        <div className="grid lg:grid-cols-2 gap-3 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                           <div>
                             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Muammo</p>
                             <p className="text-gray-700">{v.problem || '—'}</p>

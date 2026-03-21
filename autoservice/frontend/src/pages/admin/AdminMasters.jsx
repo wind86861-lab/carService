@@ -46,7 +46,7 @@ export default function AdminMasters() {
   return (
     <AdminLayout>
       {toast && <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">{toast}</div>}
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
         <h1 className="text-xl font-bold text-gray-900">Ustalar</h1>
         <div className="card p-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} ta usta</div>

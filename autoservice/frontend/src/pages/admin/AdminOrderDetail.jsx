@@ -64,7 +64,7 @@ export default function AdminOrderDetail() {
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">{toast}</div>
       )}
-      <div className="p-6 space-y-6 max-w-5xl">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl">
         {photos.length > 0 && (
           <div className="card p-0 overflow-hidden">
             <div className="relative bg-black aspect-video max-h-64">
@@ -88,14 +88,14 @@ export default function AdminOrderDetail() {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button onClick={() => navigate('/admin/orders')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
-          <span className="font-mono font-bold text-blue-700 text-lg">{order.order_number}</span>
+          <span className="font-mono font-bold text-blue-700 text-base sm:text-lg">{order.order_number}</span>
           <StatusBadge status={order.status} size="lg" />
           {order.client_confirmed && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Mijoz tasdiqlagan</span>}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           <div className="card">
             <h2 className="font-semibold text-gray-700 mb-3">Mashina va Mijoz</h2>
             <InfoRow label="Mashina" value={`${order.brand || ''} ${order.model || ''}`.trim()} />
@@ -121,7 +121,7 @@ export default function AdminOrderDetail() {
 
         <div className="card">
           <h2 className="font-semibold text-gray-700 mb-3">Muammo va Ish</h2>
-          <div className="grid lg:grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Muammo</p>
               <p>{order.problem || '—'}</p>
@@ -182,10 +182,10 @@ export default function AdminOrderDetail() {
               <h2 className="font-semibold text-red-700">Admin amallari</h2>
             </div>
             <p className="text-sm text-gray-500 mb-4">Bu buyurtmani joriy holatidan qat'i nazar majburiy yopish.</p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <input
                 type="number" min="0" placeholder="Qismlar narxi (UZS)"
-                className="input w-52"
+                className="input w-full sm:w-52"
                 value={partsCost}
                 onChange={e => setPartsCost(e.target.value)}
               />

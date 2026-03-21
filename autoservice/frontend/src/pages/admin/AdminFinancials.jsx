@@ -70,13 +70,13 @@ export default function AdminFinancials() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-5">
-        <div className="flex items-center justify-between">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-5">
+        <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold text-gray-900">Moliya</h1>
           <ExportButton filters={exportFilters} />
         </div>
 
-        <div className="card p-4 flex flex-wrap items-center gap-3">
+        <div className="card p-3 sm:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
           <div className="flex gap-1 flex-wrap">
             {PERIODS.map(p => (
               <button key={p.value} onClick={() => setPeriod(p.value)}
@@ -92,7 +92,7 @@ export default function AdminFinancials() {
               <button onClick={load} className="btn-primary py-1.5">Qo'llash</button>
             </div>
           )}
-          <select className="input w-48 ml-auto" value={masterId} onChange={e => setMasterId(e.target.value)}>
+          <select className="input w-full sm:w-48 sm:ml-auto" value={masterId} onChange={e => setMasterId(e.target.value)}>
             <option value="">Barcha ustalar</option>
             {masters.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
           </select>
@@ -102,7 +102,7 @@ export default function AdminFinancials() {
           <div className="text-center py-12 text-gray-400">Yuklanmoqda…</div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               {summaryCards.map(({ label, value, color }) => (
                 <div key={label} className="card text-center">
                   <p className={`text-lg font-bold ${color}`}>{value}</p>

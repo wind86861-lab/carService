@@ -46,14 +46,14 @@ export default function AdminOrders() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
+        <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold text-gray-900">Buyurtmalar</h1>
           <ExportButton filters={exportFilters} />
         </div>
 
         <form onSubmit={handleSearch} className="card p-4">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <select className="input" value={filters.status} onChange={e => setFilter('status', e.target.value)}>
               {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>

@@ -44,10 +44,10 @@ export default function AdminBroadcast() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         <h1 className="text-xl font-bold text-gray-900">Xabar yuborish</h1>
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="space-y-4">
             <div className="card space-y-3">
               <h2 className="font-semibold text-gray-700">Auditoriyani tanlang</h2>

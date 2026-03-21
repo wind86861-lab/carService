@@ -39,10 +39,10 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         <h1 className="text-xl font-bold text-gray-900">Boshqaruv paneli</h1>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
           {loading
             ? Array(6).fill(0).map((_, i) => <div key={i} className="card h-28 animate-pulse bg-gray-100" />)
             : kpis.map(({ label, value, icon: Icon, color, bg }) => (
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
                 <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-2`}>
                   <Icon size={18} className={color} />
                 </div>
-                <p className="text-xl font-bold text-gray-900">{value}</p>
+                <p className="text-lg sm:text-xl font-bold text-gray-900">{value}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{label}</p>
               </div>
             ))

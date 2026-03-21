@@ -52,10 +52,10 @@ export default function AdminClients() {
   return (
     <AdminLayout>
       {toast && <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">{toast}</div>}
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
         <h1 className="text-xl font-bold text-gray-900">Mijozlar</h1>
 
-        <div className="card p-4 flex flex-wrap items-center gap-3">
+        <div className="card p-3 sm:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
           <div className="flex gap-2 flex-1">
             <input
               className="input flex-1" placeholder="Ism yoki telefon bo'yicha qidirish…"

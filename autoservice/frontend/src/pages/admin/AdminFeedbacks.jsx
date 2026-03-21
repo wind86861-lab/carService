@@ -47,12 +47,12 @@ export default function AdminFeedbacks() {
 
   return (
     <AdminLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         <h1 className="text-xl font-bold text-gray-900">Fikr-mulohazalar</h1>
 
         {stats && (
           <>
-            <div className="grid lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
               <div className="card text-center lg:col-span-1">
                 <div className="text-5xl font-bold text-yellow-500 mb-1">
                   {Number(stats.avg_rating).toFixed(1)}
@@ -84,7 +84,7 @@ export default function AdminFeedbacks() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {(stats.categories || []).map(c => (
                 <div key={c.category} className="card text-center">
                   <p className="text-2xl font-bold">{c.count}</p>
@@ -127,7 +127,7 @@ export default function AdminFeedbacks() {
           </>
         )}
 
-        <div className="card p-4 flex flex-wrap gap-3">
+        <div className="card p-3 sm:p-4 flex flex-wrap gap-2 sm:gap-3">
           <select className="input w-48" value={filters.master_id} onChange={e => setFilter('master_id', e.target.value)}>
             <option value="">Barcha ustalar</option>
             {masters.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}

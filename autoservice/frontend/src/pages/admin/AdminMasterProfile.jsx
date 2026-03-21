@@ -80,32 +80,32 @@ export default function AdminMasterProfile() {
   return (
     <AdminLayout>
       {toast && <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">{toast}</div>}
-      <div className="p-6 max-w-5xl space-y-6">
-        <div className="flex items-center gap-3">
+      <div className="p-3 sm:p-6 max-w-5xl space-y-4 sm:space-y-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button onClick={() => navigate('/admin/masters')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
-          <h1 className="text-xl font-bold">{user.full_name || '…'}</h1>
+          <h1 className="text-lg sm:text-xl font-bold">{user.full_name || '…'}</h1>
           {user.role && <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{user.role}</span>}
           {!user.is_active && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Bloklangan</span>}
         </div>
 
         {!loading && (
           <div className="card">
-            <div className="flex items-start justify-between">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-                <span className="text-gray-500">Foydalanuvchi nomi</span><span className="font-mono">{user.username || '—'}</span>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="grid grid-cols-2 gap-x-4 sm:gap-x-8 gap-y-1 text-sm">
+                <span className="text-gray-500">Foydalanuvchi nomi</span><span className="font-mono text-xs">{user.username || '—'}</span>
                 <span className="text-gray-500">Telefon</span><span>{user.phone || '—'}</span>
-                <span className="text-gray-500">Telegram ID</span><span className="font-mono">{user.telegram_id || '—'}</span>
+                <span className="text-gray-500">Telegram ID</span><span className="font-mono text-xs">{user.telegram_id || '—'}</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {user.role === 'master' && (
-                  <button onClick={() => setConfirmAction({ type: 'demote' })} className="btn-secondary"><ArrowDown size={14} /> Tushirish</button>
+                  <button onClick={() => setConfirmAction({ type: 'demote' })} className="btn-secondary text-xs sm:text-sm"><ArrowDown size={14} /> Tushirish</button>
                 )}
                 {user.role === 'client' && (
-                  <button onClick={() => setConfirmAction({ type: 'promote' })} className="btn-primary"><ArrowUp size={14} /> Ko'tarish</button>
+                  <button onClick={() => setConfirmAction({ type: 'promote' })} className="btn-primary text-xs sm:text-sm"><ArrowUp size={14} /> Ko'tarish</button>
                 )}
                 {user.is_active
-                  ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger"><Ban size={14} /> Bloklash</button>
-                  : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success"><CheckCircle size={14} /> Blokdan chiqarish</button>
+                  ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger text-xs sm:text-sm"><Ban size={14} /> Bloklash</button>
+                  : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success text-xs sm:text-sm"><CheckCircle size={14} /> Blokdan chiqarish</button>
                 }
               </div>
             </div>
@@ -120,7 +120,7 @@ export default function AdminMasterProfile() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {kpis.map(({ label, value }) => (
             <div key={label} className="card text-center">
               <p className="text-xl font-bold">{loading ? '…' : value}</p>
