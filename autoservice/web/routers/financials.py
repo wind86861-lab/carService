@@ -61,16 +61,18 @@ async def financial_orders(
     result = []
     for o in all_orders:
         closed_at = o.get("closed_at")
-        if closed_at and start <= closed_at.replace(tzinfo=timezone.utc) <= end:
-            result.append({
-                "order_number": o["order_number"],
-                "brand": o.get("brand"),
-                "model": o.get("model"),
-                "plate": o.get("plate"),
-                "agreed_price": float(o["agreed_price"]),
-                "parts_cost": float(o["parts_cost"]),
-                "profit": float(o["profit"]),
-                "master_share": float(o["master_share"]),
-                "closed_at": o["closed_at"],
-            })
+        if closed_at:
+            closed_naive = closed_at.replace(tzinfo=None) if closed_at.tzinfo else closed_at
+            if start <= closed_naive <= end:
+                result.append({
+                    "order_number": o["order_number"],
+                    "brand": o.get("brand"),
+                    "model": o.get("model"),
+                    "plate": o.get("plate"),
+                    "agreed_price": float(o.get("agreed_price") or 0),
+                    "parts_cost": float(o.get("parts_cost") or 0),
+                    "profit": float(o.get("profit") or 0),
+                    "master_share": float(o.get("master_share") or 0),
+                    "closed_at": o["closed_at"],
+                })
     return result
