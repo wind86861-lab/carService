@@ -12,6 +12,20 @@ def get_skip_inline() -> InlineKeyboardMarkup:
     )
 
 
+def get_link_confirm_keyboard(order_number: str, lang: str = "uz") -> InlineKeyboardMarkup:
+    """Return confirm/cancel buttons for client link flow."""
+    yes = "✅ Tasdiqlash" if lang == "uz" else "✅ Подтвердить"
+    no = "❌ Bekor qilish" if lang == "uz" else "❌ Отмена"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=yes, callback_data=f"link_confirm:{order_number}"),
+                InlineKeyboardButton(text=no, callback_data="link_cancel"),
+            ]
+        ]
+    )
+
+
 def get_order_card_keyboard(order_number: str, lang: str = "uz") -> InlineKeyboardMarkup:
     """Return an inline keyboard with a 'View Photos' button."""
     label = "📷 Rasmlar" if lang == "uz" else "📷 Фото"

@@ -6,35 +6,29 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 
 from bot.i18n import t, lang_of
-from bot.states import Registration
-from bot.keyboards.reply import get_language_keyboard, get_main_keyboard, get_phone_keyboard
-from bot.keyboards.inline import get_order_card_keyboard
+from bot.states import Registration, ClientLinkOrder
+from bot.keyboards.reply import get_language_keyboard, get_main_keyboard, get_phone_keyboard, get_cancel_keyboard
 from bot.database.models import (
     set_user_language,
     update_user_phone,
     get_order_by_number,
-    link_client_to_order,
-    get_car_by_order_number,
 )
-from bot.utils.formatters import build_order_card
 
 logger = logging.getLogger(__name__)
 
 router = Router()
 
 
-async def _try_link_order(message: Message, order_number: str, db_user: dict):
-    """Attempt to link a deep-linked order number. Returns True if linked."""
+async def _start_link_verification(message: Message, state: FSMContext, order_number: str, db_user: dict):
+    """Start the plate verification flow for a deep-linked order."""
     order = await get_order_by_number(order_number)
     if not order:
         logger.warning("Deep link order %s not found", order_number)
         return False
-    await link_client_to_order(order_number, db_user["id"])
-    car = await get_car_by_order_number(order_number)
     lang = lang_of(db_user)
-    card = build_order_card(order, car, lang=lang)
-    await message.answer(t("car_linked_ok", lang))
-    await message.answer(card, parse_mode="HTML", reply_markup=get_order_card_keyboard(order_number))
+    await state.update_data(link_order_number_pending=order_number)
+    await state.set_state(ClientLinkOrder.waiting_for_plate)
+    await message.answer(t("enter_plate", lang), reply_markup=get_cancel_keyboard(lang))
     return True
 
 
@@ -93,7 +87,13 @@ async def set_language_callback(callback: CallbackQuery, state: FSMContext, db_u
         await state.clear()
         role = db_user.get("role", "client")
         if pending_order and role == "client":
-            await _try_link_order(callback.message, pending_order, db_user)
+            key = f"welcome_{role}" if role in ("admin", "master") else "welcome_client"
+            await callback.message.answer(
+                t(key, lang, name=db_user.get("full_name", "")),
+            )
+            await _start_link_verification(callback.message, state, pending_order, db_user)
+            await callback.answer()
+            return
         key = f"welcome_{role}" if role in ("admin", "master") else "welcome_client"
         await callback.message.answer(
             t(key, lang, name=db_user.get("full_name", "")),
@@ -120,8 +120,10 @@ async def phone_handler(message: Message, state: FSMContext, db_user: dict):
     await state.clear()
     lang = lang_of(db_user)
     role = db_user["role"]
-    if pending_order:
-        await _try_link_order(message, pending_order, db_user)
+    if pending_order and role == "client":
+        await message.answer(t("phone_saved", lang))
+        await _start_link_verification(message, state, pending_order, db_user)
+        return
     await message.answer(t("phone_saved", lang), reply_markup=get_main_keyboard(role, lang))
 
 

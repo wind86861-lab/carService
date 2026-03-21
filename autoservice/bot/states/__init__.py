@@ -12,7 +12,9 @@ class ClientDispute(StatesGroup):
 
 
 class ClientLinkOrder(StatesGroup):
+    waiting_for_plate = State()
     waiting_for_order_number = State()
+    waiting_for_confirm = State()
 
 
 class ClientFeedback(StatesGroup):

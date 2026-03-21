@@ -15,6 +15,7 @@ from bot.keyboards.inline import (
     get_comment_skip_inline,
     get_load_more_keyboard,
     get_rating_keyboard,
+    get_link_confirm_keyboard,
 )
 from bot.database.models import (
     get_expenses_by_order,
@@ -78,12 +79,73 @@ async def _build_card(order, db_user: dict):
 @router.message(F.text.in_(all_variants("btn_link_order")))
 async def client_link_handler(message: Message, state: FSMContext, db_user: dict):
     lang = lang_of(db_user)
+    await state.set_state(ClientLinkOrder.waiting_for_plate)
+    await message.answer(t("enter_plate", lang), reply_markup=get_cancel_keyboard(lang))
+
+
+@router.message(ClientLinkOrder.waiting_for_plate)
+async def client_plate_handler(message: Message, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
+    if message.text and message.text.strip() in all_variants("btn_cancel"):
+        await state.clear()
+        await message.answer(t("cancelled", lang), reply_markup=get_main_keyboard("client", lang))
+        return
+    plate = message.text.strip().upper() if message.text else ""
+    await state.update_data(link_plate=plate)
+    data = await state.get_data()
+    pending = data.get("link_order_number_pending")
+    if pending:
+        await _verify_and_show_confirm(message, state, db_user, pending)
+        return
     await state.set_state(ClientLinkOrder.waiting_for_order_number)
-    await message.answer(t("enter_order_number", lang), reply_markup=get_cancel_keyboard(lang))
+    await message.answer(t("enter_order_number", lang))
+
+
+async def _verify_and_show_confirm(message: Message, state: FSMContext, db_user: dict, order_number: str):
+    """Verify plate matches order, show details, ask for confirmation."""
+    lang = lang_of(db_user)
+    order = await get_order_by_number(order_number)
+    if not order:
+        await message.answer(t("order_not_found", lang))
+        await state.clear()
+        await message.answer("📱", reply_markup=get_main_keyboard("client", lang))
+        return
+    if order.get("client_id") == db_user["id"]:
+        await state.clear()
+        await message.answer(t("already_linked", lang), reply_markup=get_main_keyboard("client", lang))
+        return
+    car = await get_car_by_order_number(order_number)
+    data = await state.get_data()
+    plate_input = data.get("link_plate", "")
+    car_plate = (car["plate"] if car and car.get("plate") else "").upper()
+    if not car_plate or plate_input != car_plate:
+        await message.answer(t("plate_mismatch", lang))
+        await state.set_state(ClientLinkOrder.waiting_for_plate)
+        await message.answer(t("enter_plate", lang))
+        return
+    car_name = f"{car.get('brand', '') or ''} {car.get('model', '') or ''}".strip() or "\u2014"
+    car_full = f"{car_name} | {car_plate}"
+    master_name = "\u2014"
+    if order.get("master_id"):
+        master = await get_user_by_id(order["master_id"])
+        if master:
+            master_name = master["full_name"]
+    await state.update_data(link_order_number=order_number)
+    await state.set_state(ClientLinkOrder.waiting_for_confirm)
+    await message.answer(
+        t("link_confirm_prompt", lang,
+          order_number=order_number,
+          car=car_full,
+          problem=order.get("problem") or "\u2014",
+          status=format_order_status(order["status"], lang),
+          master=master_name),
+        parse_mode="HTML",
+        reply_markup=get_link_confirm_keyboard(order_number, lang),
+    )
 
 
 @router.message(ClientLinkOrder.waiting_for_order_number)
-async def client_order_number_handler(message: Message, state: FSMContext, db_user: dict, bot: Bot):
+async def client_order_number_handler(message: Message, state: FSMContext, db_user: dict):
     lang = lang_of(db_user)
     if message.text and message.text.strip() in all_variants("btn_cancel"):
         await state.clear()
@@ -94,12 +156,38 @@ async def client_order_number_handler(message: Message, state: FSMContext, db_us
     if not order:
         await message.answer(t("order_not_found", lang))
         return
+    await _verify_and_show_confirm(message, state, db_user, order_number)
+
+
+@router.callback_query(F.data.startswith("link_confirm:"))
+async def client_link_confirm_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
+    order_number = callback.data.split(":", 1)[1]
+    order = await get_order_by_number(order_number)
+    if not order:
+        await callback.answer(t("order_not_found", lang), show_alert=True); return
     await link_client_to_order(order_number, db_user["id"])
     await state.clear()
+    await callback.message.edit_text(
+        (callback.message.text or "") + "\n\n" + t("link_confirmed", lang),
+        reply_markup=None,
+    )
     card, kb = await _build_card(order, db_user)
-    await message.answer(t("car_linked_ok", lang))
-    await message.answer(card, parse_mode="HTML", reply_markup=kb)
-    await message.answer("📱", reply_markup=get_main_keyboard("client", lang))
+    await callback.message.answer(card, parse_mode="HTML", reply_markup=kb)
+    await callback.message.answer("\u2705", reply_markup=get_main_keyboard("client", lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "link_cancel")
+async def client_link_cancel_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
+    lang = lang_of(db_user)
+    await state.clear()
+    await callback.message.edit_text(
+        (callback.message.text or "") + "\n\n" + t("link_cancelled", lang),
+        reply_markup=None,
+    )
+    await callback.message.answer("\u2705", reply_markup=get_main_keyboard("client", lang))
+    await callback.answer()
 
 
 # ------------------------------------------------------------------

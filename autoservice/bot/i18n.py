@@ -17,7 +17,7 @@ STRINGS: dict[str, dict[str, str]] = {
             "🚗 Mashina holati — mashinangiz holatini tekshirish\n"
             "🔗 Buyurtmaga bog'lanish — mavjud buyurtmaga bog'lanish\n"
             "📋 Mening buyurtmalarim — buyurtmalar tarixi"
-        ),
+        ), 
         "help_master": (
             "/start — botni qayta ishga tushirish\n"
             "/language — tilni o'zgartirish\n\n"
@@ -113,8 +113,22 @@ STRINGS: dict[str, dict[str, str]] = {
         # --- Client no orders ---
         "no_active_orders": "Hozirda faol buyurtmalaringiz yo'q.",
         "no_orders": "Sizda hali buyurtmalar yo'q.",
-        "enter_order_number": "Buyurtma raqamingizni kiriting (masalan, A-00123):",
+        "enter_plate": "🚗 Mashina davlat raqamini kiriting:\n(masalan: 01A123BB)",
+        "enter_order_number": "📋 Buyurtma raqamini kiriting:\n(masalan: A-0008)",
         "order_not_found": "❌ Buyurtma topilmadi. Raqamni tekshirib, qayta urinib ko'ring.",
+        "plate_mismatch": "❌ Mashina raqami buyurtma bilan mos kelmadi. Qaytadan urinib ko'ring.",
+        "link_confirm_prompt": (
+            "🔗 <b>Buyurtmaga bog'lanish</b>\n\n"
+            "📋 Buyurtma: <b>{order_number}</b>\n"
+            "🚗 Mashina: <b>{car}</b>\n"
+            "🔧 Muammo: {problem}\n"
+            "📊 Holat: {status}\n"
+            "👨‍🔧 Usta: {master}\n\n"
+            "Ushbu buyurtmaga bog'lanishni tasdiqlaysizmi?"
+        ),
+        "link_confirmed": "✅ Siz buyurtmaga muvaffaqiyatli bog'landingiz! Endi mashina holati haqida bildirishnomalar olasiz.",
+        "link_cancelled": "❌ Bog'lanish bekor qilindi.",
+        "already_linked": "✅ Bu buyurtma allaqachon sizga bog'langan.",
         # --- Confirmation ---
         "confirm_receipt_done": "✅ Siz mashinani qabul qilganingizni tasdiqladingiz. Buyurtma yopildi.",
         "already_confirmed": "✅ Siz allaqachon qabul qilganingizni tasdiqlagansiz.",
@@ -376,8 +390,22 @@ STRINGS: dict[str, dict[str, str]] = {
         # --- Client no orders ---
         "no_active_orders": "У вас нет активных заказов.",
         "no_orders": "У вас ещё нет заказов.",
-        "enter_order_number": "Введите номер заказа (например, A-00123):",
+        "enter_plate": "🚗 Введите госномер автомобиля:\n(например: 01A123BB)",
+        "enter_order_number": "📋 Введите номер заказа:\n(например: A-0008)",
         "order_not_found": "❌ Заказ не найден. Проверьте номер и попробуйте снова.",
+        "plate_mismatch": "❌ Госномер не совпадает с заказом. Попробуйте снова.",
+        "link_confirm_prompt": (
+            "🔗 <b>Привязка к заказу</b>\n\n"
+            "📋 Заказ: <b>{order_number}</b>\n"
+            "🚗 Авто: <b>{car}</b>\n"
+            "🔧 Проблема: {problem}\n"
+            "📊 Статус: {status}\n"
+            "👨‍🔧 Мастер: {master}\n\n"
+            "Подтверждаете привязку к этому заказу?"
+        ),
+        "link_confirmed": "✅ Вы успешно привязаны к заказу! Теперь вы будете получать уведомления о статусе автомобиля.",
+        "link_cancelled": "❌ Привязка отменена.",
+        "already_linked": "✅ Этот заказ уже привязан к вам.",
         # --- Confirmation ---
         "confirm_receipt_done": "✅ Вы подтвердили получение автомобиля. Заказ закрыт.",
         "already_confirmed": "✅ Вы уже подтвердили получение.",
