@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getOrders, getFinancialSummary } from '../api/client'
 import { useAuth } from '../App'
 import StatusBadge from '../components/StatusBadge'
-import { Plus, LogOut, BarChart2, Car, Clock, CheckCircle, DollarSign } from 'lucide-react'
+import { Plus, LogOut, BarChart2, Car, Clock, CheckCircle, DollarSign, UserCircle } from 'lucide-react'
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('ru-RU') + ' UZS'
@@ -27,7 +27,7 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  const active = orders.filter(o => ['new','preparation','in_process'].includes(o.status))
+  const active = orders.filter(o => ['new', 'preparation', 'in_process'].includes(o.status))
   const ready = orders.filter(o => o.status === 'ready')
   const closed = orders.filter(o => o.status === 'closed')
 
@@ -44,6 +44,9 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-900">AutoService Dashboard</h1>
           <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/profile')} className="btn-secondary">
+              <UserCircle size={16} /> Profile
+            </button>
             <button onClick={() => navigate('/statistics')} className="btn-secondary">
               <BarChart2 size={16} /> Statistics
             </button>
@@ -104,7 +107,7 @@ export default function Dashboard() {
                     >
                       <td className="px-6 py-3 font-mono font-bold text-blue-700">{o.order_number}</td>
                       <td className="px-6 py-3">
-                        <div>{`${o.brand||''} ${o.model||''}`.trim() || '—'}</div>
+                        <div>{`${o.brand || ''} ${o.model || ''}`.trim() || '—'}</div>
                         {o.plate && <div className="text-xs text-gray-400 font-mono">{o.plate}</div>}
                       </td>
                       <td className="px-6 py-3 text-gray-600">{o.client_name || '—'}</td>

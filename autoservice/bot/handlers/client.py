@@ -259,8 +259,8 @@ async def dispute_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
     order = await get_order_by_number(order_number)
     client_name = db_user["full_name"]
     master_name = "—"
-    await update_order_status(order_number, "ready",
-        note=f"Dispute raised by {client_name}", changed_by=db_user["id"])
+    await update_order_status(order_number, "in_process",
+        note=f"Dispute raised by {client_name} — reverted to in_process", changed_by=db_user["id"])
     if order and order["master_id"]:
         master = await get_user_by_id(order["master_id"])
         if master:

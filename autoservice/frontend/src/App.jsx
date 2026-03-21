@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import NewOrder from './pages/NewOrder'
 import OrderDetail from './pages/OrderDetail'
 import Statistics from './pages/Statistics'
+import Profile from './pages/Profile'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminOrderDetail from './pages/admin/AdminOrderDetail'
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/new-order" element={<ProtectedRoute><NewOrder /></ProtectedRoute>} />
           <Route path="/orders/:orderNumber" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
           <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
           <Route path="/admin/orders/:orderNumber" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />

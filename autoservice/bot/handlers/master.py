@@ -31,7 +31,7 @@ from bot.keyboards.inline import (
 from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
 from bot.states import MasterCloseOrder, MasterCreateOrder, MasterUpdateParts
 from bot.utils.formatters import format_datetime, format_money, format_order_status
-from bot.utils.notifications import notify_client_receipt_request
+from bot.utils.notifications import notify_client_receipt_request, notify_client_status_changed
 
 logger = logging.getLogger(__name__)
 
@@ -511,16 +511,21 @@ async def master_status_change_callback(callback: CallbackQuery, db_user: dict):
         logger.exception("Failed to update order status")
         await callback.answer(t("error_generic", lang)); return
 
-    if new_status == "ready":
-        try:
-            client_id = order_now.get("client_id")
-            if client_id:
-                client = await get_user_by_id(client_id)
-                if client and client.get("telegram_id"):
-                    client_lang = client.get("language") or "uz"
+    # Notify client on every status change
+    try:
+        client_id = order_now.get("client_id")
+        if client_id:
+            client = await get_user_by_id(client_id)
+            if client and client.get("telegram_id"):
+                client_lang = client.get("language") or "uz"
+                car_info = f"{order_now.get('brand', '') or ''} {order_now.get('model', '') or ''}".strip() or "—"
+                notify_client_status_changed(
+                    client["telegram_id"], order_number, new_status, car_info, lang=client_lang
+                )
+                if new_status == "ready":
                     notify_client_receipt_request(client["telegram_id"], order_number, lang=client_lang)
-        except Exception:
-            logger.warning("Failed to notify client for order %s", order_number)
+    except Exception:
+        logger.warning("Failed to notify client for order %s", order_number)
 
     order = dict(await get_order_detail(order_number))
     confirmed = bool(order.get("client_confirmed"))

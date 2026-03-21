@@ -50,10 +50,12 @@ async def start_handler(message: Message, state: FSMContext, db_user: dict):
 
     lang = lang_of(db_user)
 
-    # First-time users: no phone yet → language selection first
+    # Store pending order for later linking
+    if pending_order:
+        await state.update_data(pending_order_number=pending_order)
+
+    # First-time users: no phone yet → language selection, then phone
     if not db_user.get("phone"):
-        if pending_order:
-            await state.update_data(pending_order_number=pending_order)
         await state.set_state(Registration.waiting_for_language)
         await message.answer(
             t("choose_language", lang),
@@ -61,13 +63,12 @@ async def start_handler(message: Message, state: FSMContext, db_user: dict):
         )
         return
 
-    if pending_order and db_user.get("role") == "client":
-        await _try_link_order(message, pending_order, db_user)
-
-    role = db_user["role"]
-    name = db_user["full_name"]
-    key = f"welcome_{role}" if role in ("admin", "master") else "welcome_client"
-    await message.answer(t(key, lang, name=name), reply_markup=get_main_keyboard(role, lang))
+    # Returning users: always show language selection on /start
+    await state.set_state(Registration.waiting_for_lang_restart)
+    await message.answer(
+        t("choose_language", lang),
+        reply_markup=get_language_keyboard(),
+    )
 
 
 @router.callback_query(F.data.startswith("set_lang:"))
@@ -84,6 +85,19 @@ async def set_language_callback(callback: CallbackQuery, state: FSMContext, db_u
         await callback.message.answer(
             t("ask_phone", lang),
             reply_markup=get_phone_keyboard(lang),
+        )
+    elif current_state == Registration.waiting_for_lang_restart:
+        # Returning user picked language on /start
+        data = await state.get_data()
+        pending_order = data.get("pending_order_number")
+        await state.clear()
+        role = db_user.get("role", "client")
+        if pending_order and role == "client":
+            await _try_link_order(callback.message, pending_order, db_user)
+        key = f"welcome_{role}" if role in ("admin", "master") else "welcome_client"
+        await callback.message.answer(
+            t(key, lang, name=db_user.get("full_name", "")),
+            reply_markup=get_main_keyboard(role, lang),
         )
     else:
         # /language command outside registration — just confirm

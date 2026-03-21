@@ -51,4 +51,7 @@ export const getFinancialSummary = (params) =>
 export const getFinancialOrders = (params) =>
   api.get('/financials/orders', { params }).then((r) => r.data)
 
+export const getProfile = () => api.get('/profile').then((r) => r.data)
+export const changePassword = (data) => api.patch('/profile/password', data).then((r) => r.data)
+
 export default api
