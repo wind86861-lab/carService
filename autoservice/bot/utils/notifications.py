@@ -99,6 +99,41 @@ async def notify_admin_dispute(order_number: str, client_name: str, master_name:
         logger.exception("Failed to fetch admins for dispute notification")
 
 
+def notify_master_dispute_with_text(
+    master_telegram_id: int, order_number: str, client_name: str, issue_text: str, lang: str = "uz"
+) -> None:
+    """Enqueue dispute notification to master with client's issue description."""
+    _q().enqueue(
+        telegram_id=master_telegram_id,
+        message=t("notif_master_dispute_text", lang,
+                   order_number=order_number, client_name=client_name, issue_text=issue_text),
+    )
+
+
+async def notify_admin_dispute_with_text(
+    order_number: str, client_name: str, master_name: str, issue_text: str
+) -> None:
+    """Enqueue dispute notification with issue text to all admins."""
+    try:
+        admins = await get_users_by_role("admin")
+        for admin in admins:
+            lang = lang_of(admin)
+            header = "Shikoyat" if lang == "uz" else "Жалоба"
+            client_lbl = "Mijoz" if lang == "uz" else "Клиент"
+            master_lbl = "Usta" if lang == "uz" else "Мастер"
+            issue_lbl = "Muammo" if lang == "uz" else "Проблема"
+            text = (
+                f"⚠️ <b>{header} — {order_number}</b>\n\n"
+                f"{client_lbl}: {client_name}\n"
+                f"{master_lbl}: {master_name}\n"
+                f"{issue_lbl}: <i>{issue_text}</i>\n\n"
+                f"{'Buyurtma holati «jarayonda» ga qaytarildi.' if lang == 'uz' else 'Статус заказа возвращён на «в процессе».'}"
+            )
+            _q().enqueue(telegram_id=admin["telegram_id"], message=text)
+    except Exception:
+        logger.exception("Failed to fetch admins for dispute notification")
+
+
 async def schedule_feedback_request(
     bot: Bot, client_telegram_id: int, order_id: int, order_number: str, dp
 ) -> None:

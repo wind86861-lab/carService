@@ -6,7 +6,7 @@ from aiogram.types import FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from bot.i18n import t, lang_of, all_variants
-from bot.states import ClientLinkOrder, ClientFeedback
+from bot.states import ClientDispute, ClientLinkOrder, ClientFeedback
 from bot.keyboards.reply import get_main_keyboard, get_cancel_keyboard
 from bot.keyboards.inline import (
     get_order_card_keyboard,
@@ -36,6 +36,8 @@ from bot.utils.notifications import (
     notify_master_receipt_confirmed,
     notify_master_dispute,
     notify_admin_dispute,
+    notify_master_dispute_with_text,
+    notify_admin_dispute_with_text,
     schedule_feedback_request,
 )
 
@@ -251,24 +253,42 @@ async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: 
 
 
 @router.callback_query(F.data.startswith("dispute:"))
-async def dispute_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
+async def dispute_callback(callback: CallbackQuery, state: FSMContext, db_user: dict):
     lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
-    new_text = (callback.message.text or "") + "\n\n" + t("dispute_reported", lang)
-    await callback.message.edit_text(new_text, reply_markup=None)
+    await callback.message.edit_text(
+        (callback.message.text or "") + "\n\n" + t("dispute_ask_reason", lang),
+        reply_markup=None,
+    )
+    await state.set_state(ClientDispute.waiting_for_issue_text)
+    await state.update_data(dispute_order_number=order_number)
+    await callback.answer()
+
+
+@router.message(ClientDispute.waiting_for_issue_text, F.text)
+async def dispute_issue_text_handler(message: Message, state: FSMContext, db_user: dict, bot: Bot):
+    lang = lang_of(db_user)
+    data = await state.get_data()
+    order_number = data.get("dispute_order_number")
+    await state.clear()
+    if not order_number:
+        return
+    issue_text = message.text.strip()
     order = await get_order_by_number(order_number)
     client_name = db_user["full_name"]
     master_name = "—"
     await update_order_status(order_number, "in_process",
-        note=f"Dispute raised by {client_name} — reverted to in_process", changed_by=db_user["id"])
+        note=f"Dispute: {issue_text}", changed_by=db_user["id"])
     if order and order["master_id"]:
         master = await get_user_by_id(order["master_id"])
         if master:
             master_name = master["full_name"]
             master_lang = master.get("language") or "uz"
-            notify_master_dispute(master["telegram_id"], order_number, client_name, lang=master_lang)
-    await notify_admin_dispute(order_number, client_name, master_name)
-    await callback.answer()
+            notify_master_dispute_with_text(
+                master["telegram_id"], order_number, client_name, issue_text, lang=master_lang
+            )
+    await notify_admin_dispute_with_text(order_number, client_name, master_name, issue_text)
+    await message.answer(t("dispute_reported", lang), reply_markup=get_main_keyboard("client", lang))
 
 
 # ------------------------------------------------------------------

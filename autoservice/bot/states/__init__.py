@@ -7,6 +7,10 @@ class Registration(StatesGroup):
     waiting_for_lang_restart = State()
 
 
+class ClientDispute(StatesGroup):
+    waiting_for_issue_text = State()
+
+
 class ClientLinkOrder(StatesGroup):
     waiting_for_order_number = State()
 

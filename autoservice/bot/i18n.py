@@ -118,7 +118,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # --- Confirmation ---
         "confirm_receipt_done": "✅ Siz mashinani qabul qilganingizni tasdiqladingiz. Buyurtma yopildi.",
         "already_confirmed": "✅ Siz allaqachon qabul qilganingizni tasdiqlagansiz.",
-        "dispute_reported": "⚠️ Biz ustani sizning muammo haqida xabardor qildik.",
+        "dispute_reported": "⚠️ Sizning shikoyatingiz qabul qilindi. Usta va admin xabardor qilindi.",
+        "dispute_ask_reason": "✏️ Iltimos, muammoni tasvirlab bering:\n(Nima noto'g'ri? Qanday muammo bor?)",
+        "notif_master_dispute_text": "⚠️ <b>Shikoyat — {order_number}</b>\n\nMijoz: {client_name}\nMuammo: <i>{issue_text}</i>\n\nBuyurtma holati «jarayonda» ga qaytarildi. Iltimos, tekshirib, qayta tayyorlang.",
         # --- Reply keyboard buttons ---
         "btn_cancel": "❌ Bekor qilish",
         "btn_send_phone": "📱 Telefon raqamini yuborish",
@@ -379,7 +381,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # --- Confirmation ---
         "confirm_receipt_done": "✅ Вы подтвердили получение автомобиля. Заказ закрыт.",
         "already_confirmed": "✅ Вы уже подтвердили получение.",
-        "dispute_reported": "⚠️ Мы уведомили мастера о вашей проблеме.",
+        "dispute_reported": "⚠️ Ваша жалоба принята. Мастер и админ уведомлены.",
+        "dispute_ask_reason": "✏️ Пожалуйста, опишите проблему:\n(Что не так? Какая проблема?)",
+        "notif_master_dispute_text": "⚠️ <b>Жалоба — {order_number}</b>\n\nКлиент: {client_name}\nПроблема: <i>{issue_text}</i>\n\nСтатус заказа возвращён на «в процессе». Пожалуйста, проверьте и исправьте.",
         # --- Reply keyboard buttons ---
         "btn_cancel": "❌ Отмена",
         "btn_send_phone": "📱 Отправить номер телефона",
