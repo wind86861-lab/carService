@@ -56,12 +56,24 @@ async def health():
 
 @app.get("/tg-photo/{file_id:path}")
 async def telegram_photo_proxy(file_id: str):
-    """Proxy a Telegram photo by file_id — downloads from Telegram and streams to browser."""
+    """Download a Telegram photo once, cache locally, then serve from cache."""
     from web.config import BOT_TOKEN
     if not BOT_TOKEN:
         return JSONResponse({"error": "Bot token not configured"}, status_code=503)
+
+    # Check local cache first
+    import hashlib
+    cache_dir = UPLOAD_DIR / "tg_cache"
+    cache_dir.mkdir(exist_ok=True)
+    safe_name = hashlib.sha256(file_id.encode()).hexdigest()
+    cached = list(cache_dir.glob(f"{safe_name}.*"))
+    if cached:
+        from fastapi.responses import FileResponse
+        return FileResponse(cached[0], media_type="image/jpeg")
+
+    # Download from Telegram and cache
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
                 f"https://api.telegram.org/bot{BOT_TOKEN}/getFile",
                 params={"file_id": file_id},
@@ -70,11 +82,14 @@ async def telegram_photo_proxy(file_id: str):
             if not data.get("ok"):
                 return JSONResponse({"error": "File not found"}, status_code=404)
             file_path = data["result"]["file_path"]
+            ext = file_path.rsplit(".", 1)[-1] if "." in file_path else "jpg"
             photo_resp = await client.get(
                 f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
             )
-            content_type = photo_resp.headers.get("content-type", "image/jpeg")
-            return StreamingResponse(iter([photo_resp.content]), media_type=content_type)
+            cache_file = cache_dir / f"{safe_name}.{ext}"
+            cache_file.write_bytes(photo_resp.content)
+            from fastapi.responses import FileResponse
+            return FileResponse(cache_file, media_type="image/jpeg")
     except Exception:
         logger.exception("Failed to proxy Telegram photo %s", file_id)
         return JSONResponse({"error": "Failed to fetch photo"}, status_code=502)
