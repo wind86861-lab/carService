@@ -37,20 +37,20 @@ export default function AdminClientProfile() {
       else if (confirmAction.type === 'unblock') await unblockUser(Number(id), 'clients')
       else if (confirmAction.type === 'promote') {
         const result = await promoteToMaster(Number(id))
-        showToast(`Promoted to master! ${result.password_generated ? 'Credentials sent via Telegram.' : ''}`)
+        showToast(`Ustaga ko'tarildi! ${result.password_generated ? 'Login ma\'lumotlari Telegram orqali yuborildi.' : ''}`)
       }
       setConfirmAction(null)
       reload()
       if (confirmAction.type !== 'promote') {
-        showToast(confirmAction.type === 'block' ? 'User blocked.' : 'User unblocked.')
+        showToast(confirmAction.type === 'block' ? 'Foydalanuvchi bloklandi.' : 'Foydalanuvchi blokdan chiqarildi.')
       }
     } catch (e) {
       showToast(e.response?.data?.detail || 'Action failed')
     } finally { setActionLoading(false) }
   }
 
-  if (loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Loading…</div></AdminLayout>
-  if (!profile) return <AdminLayout><div className="p-8 text-center text-gray-400">Client not found.</div></AdminLayout>
+  if (loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Yuklanmoqda…</div></AdminLayout>
+  if (!profile) return <AdminLayout><div className="p-8 text-center text-gray-400">Mijoz topilmadi.</div></AdminLayout>
 
   const { user, orders = [], feedbacks = [] } = profile
 
@@ -62,29 +62,29 @@ export default function AdminClientProfile() {
           <button onClick={() => navigate('/admin/clients')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
           <h1 className="text-xl font-bold">{user.full_name}</h1>
           {user.is_active
-            ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
-            : <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Blocked</span>
+            ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Faol</span>
+            : <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Bloklangan</span>
           }
         </div>
 
         <div className="card">
           <div className="flex items-start justify-between">
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-              <span className="text-gray-500">Phone</span><span>{user.phone || '—'}</span>
+              <span className="text-gray-500">Telefon</span><span>{user.phone || '—'}</span>
               <span className="text-gray-500">Telegram ID</span><span className="font-mono">{user.telegram_id}</span>
-              <span className="text-gray-500">Registered</span><span>{fmtDate(user.registered_at)}</span>
-              <span className="text-gray-500">Total Orders</span><span>{orders.length}</span>
+              <span className="text-gray-500">Ro'yxatdan o'tgan</span><span>{fmtDate(user.registered_at)}</span>
+              <span className="text-gray-500">Jami buyurtmalar</span><span>{orders.length}</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setConfirmAction({ type: 'promote' })}
                 className="btn-primary"
               >
-                <UserPlus size={14} /> Promote to Master
+                <UserPlus size={14} /> Ustaga ko'tarish
               </button>
               {user.is_active
-                ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger"><Ban size={14} /> Block</button>
-                : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success"><CheckCircle size={14} /> Unblock</button>
+                ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger"><Ban size={14} /> Bloklash</button>
+                : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success"><CheckCircle size={14} /> Blokdan chiqarish</button>
               }
             </div>
           </div>
@@ -105,11 +105,11 @@ export default function AdminClientProfile() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                    <th className="px-4 py-3">Order #</th>
-                    <th className="px-4 py-3">Car</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Price</th>
-                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Buyurtma №</th>
+                    <th className="px-4 py-3">Mashina</th>
+                    <th className="px-4 py-3">Holat</th>
+                    <th className="px-4 py-3 text-right">Narx</th>
+                    <th className="px-4 py-3">Sana</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -134,7 +134,7 @@ export default function AdminClientProfile() {
         {tab === 'feedbacks' && (
           <div className="space-y-3">
             {feedbacks.length === 0
-              ? <div className="card text-center text-gray-400 py-8">No feedbacks yet.</div>
+              ? <div className="card text-center text-gray-400 py-8">Hali fikr-mulohaza yo'q.</div>
               : feedbacks.map(f => (
                 <div key={f.id} className="card">
                   <div className="flex items-center justify-between mb-2">
@@ -154,17 +154,17 @@ export default function AdminClientProfile() {
       {confirmAction && (
         <ConfirmDialog
           title={
-            confirmAction.type === 'promote' ? 'Promote to Master' :
-              confirmAction.type === 'block' ? 'Block Client' : 'Unblock Client'
+            confirmAction.type === 'promote' ? 'Ustaga ko\'tarish' :
+              confirmAction.type === 'block' ? 'Mijozni bloklash' : 'Blokdan chiqarish'
           }
           message={
             confirmAction.type === 'promote'
-              ? `Promote ${user.full_name} to master? Auto-generated credentials will be sent via Telegram.`
-              : `Are you sure you want to ${confirmAction.type} ${user.full_name}?`
+              ? `${user.full_name} ni ustaga ko'tarasizmi? Login ma'lumotlari Telegram orqali yuboriladi.`
+              : `${user.full_name} ni ${confirmAction.type === 'block' ? 'bloklash' : 'blokdan chiqarish'}ni tasdiqlaysizmi?`
           }
           confirmLabel={
-            confirmAction.type === 'promote' ? 'Promote' :
-              confirmAction.type === 'block' ? 'Block' : 'Unblock'
+            confirmAction.type === 'promote' ? 'Ko\'tarish' :
+              confirmAction.type === 'block' ? 'Bloklash' : 'Blokdan chiqarish'
           }
           onClose={() => setConfirmAction(null)}
           onConfirm={handleAction}

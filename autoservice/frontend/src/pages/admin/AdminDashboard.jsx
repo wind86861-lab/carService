@@ -29,18 +29,18 @@ export default function AdminDashboard() {
   }, [])
 
   const kpis = stats ? [
-    { label: 'Active Orders', value: stats.active_orders, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Ready for Pickup', value: stats.ready_orders, icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-    { label: 'Month Revenue', value: fmt(stats.month_revenue), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Month Profit', value: fmt(stats.month_profit), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Active Clients', value: stats.total_clients, icon: Users, color: 'text-cyan-600', bg: 'bg-cyan-50' },
-    { label: 'Active Masters', value: stats.total_masters, icon: Wrench, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Faol buyurtmalar', value: stats.active_orders, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Tayyor (olishga)', value: stats.ready_orders, icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    { label: 'Oylik daromad', value: fmt(stats.month_revenue), icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Oylik foyda', value: fmt(stats.month_profit), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Faol mijozlar', value: stats.total_clients, icon: Users, color: 'text-cyan-600', bg: 'bg-cyan-50' },
+    { label: 'Faol ustalar', value: stats.total_masters, icon: Wrench, color: 'text-orange-600', bg: 'bg-orange-50' },
   ] : []
 
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-xl font-bold text-gray-900">Boshqaruv paneli</h1>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {loading
@@ -59,21 +59,21 @@ export default function AdminDashboard() {
 
         <div className="card p-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h2 className="font-semibold text-gray-800">Recent Orders</h2>
+            <h2 className="font-semibold text-gray-800">So'nggi buyurtmalar</h2>
           </div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading…</div>
+            <div className="p-8 text-center text-gray-400">Yuklanmoqda…</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                    <th className="px-4 py-3">Order #</th>
-                    <th className="px-4 py-3">Car</th>
-                    <th className="px-4 py-3">Client</th>
-                    <th className="px-4 py-3">Master</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Created</th>
+                    <th className="px-4 py-3">Buyurtma №</th>
+                    <th className="px-4 py-3">Mashina</th>
+                    <th className="px-4 py-3">Mijoz</th>
+                    <th className="px-4 py-3">Usta</th>
+                    <th className="px-4 py-3">Holat</th>
+                    <th className="px-4 py-3">Sana</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">

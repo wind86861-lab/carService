@@ -45,14 +45,14 @@ export default function AdminOrderDetail() {
       await forceCloseOrder(orderNumber, parseFloat(partsCost) || 0)
       setShowForceClose(false)
       await reload()
-      showToast('Order force-closed. Client notified.')
+      showToast('Buyurtma majburiy yopildi. Mijoz xabardor qilindi.')
     } catch (e) {
       showToast(e.response?.data?.detail || 'Failed to force-close order')
     } finally { setCloseLoading(false) }
   }
 
-  if (loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Loading…</div></AdminLayout>
-  if (!order) return <AdminLayout><div className="p-8 text-center text-gray-400">Order not found.</div></AdminLayout>
+  if (loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Yuklanmoqda…</div></AdminLayout>
+  if (!order) return <AdminLayout><div className="p-8 text-center text-gray-400">Buyurtma topilmadi.</div></AdminLayout>
 
   const logs = order.logs || []
   const photos = order.photos || []
@@ -91,42 +91,42 @@ export default function AdminOrderDetail() {
           <button onClick={() => navigate('/admin/orders')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
           <span className="font-mono font-bold text-blue-700 text-lg">{order.order_number}</span>
           <StatusBadge status={order.status} size="lg" />
-          {order.client_confirmed && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Client confirmed</span>}
+          {order.client_confirmed && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Mijoz tasdiqlagan</span>}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-4">
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">Car & Client</h2>
-            <InfoRow label="Car" value={`${order.brand || ''} ${order.model || ''}`.trim()} />
-            <InfoRow label="Plate" value={order.plate} />
-            <InfoRow label="Color / Year" value={`${order.color || ''} ${order.year || ''}`.trim()} />
-            <InfoRow label="Client" value={order.client_name || order.client_full_name} />
-            <InfoRow label="Phone" value={order.client_phone} />
-            <InfoRow label="Master" value={order.master_name} />
+            <h2 className="font-semibold text-gray-700 mb-3">Mashina va Mijoz</h2>
+            <InfoRow label="Mashina" value={`${order.brand || ''} ${order.model || ''}`.trim()} />
+            <InfoRow label="Davlat raqami" value={order.plate} />
+            <InfoRow label="Rang / Yil" value={`${order.color || ''} ${order.year || ''}`.trim()} />
+            <InfoRow label="Mijoz" value={order.client_name || order.client_full_name} />
+            <InfoRow label="Telefon" value={order.client_phone} />
+            <InfoRow label="Usta" value={order.master_name} />
           </div>
 
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">Financials (Admin View)</h2>
-            <InfoRow label="Agreed Price" value={fmt(order.agreed_price)} />
-            <InfoRow label="Paid Amount" value={fmt(order.paid_amount)} />
-            <InfoRow label="Parts Cost" value={fmt(order.parts_cost)} />
-            <InfoRow label="Profit" value={fmt(order.profit)} highlight />
-            <InfoRow label="Master Share (40%)" value={fmt(order.master_share)} />
-            <InfoRow label="Service Share (60%)" value={fmt(order.service_share)} />
-            <InfoRow label="Created" value={fmtDate(order.created_at)} />
-            {order.closed_at && <InfoRow label="Closed" value={fmtDate(order.closed_at)} />}
+            <h2 className="font-semibold text-gray-700 mb-3">Moliyaviy ma'lumotlar</h2>
+            <InfoRow label="Kelishilgan narx" value={fmt(order.agreed_price)} />
+            <InfoRow label="To'langan" value={fmt(order.paid_amount)} />
+            <InfoRow label="Ehtiyot qismlar" value={fmt(order.parts_cost)} />
+            <InfoRow label="Foyda" value={fmt(order.profit)} highlight />
+            <InfoRow label="Usta ulushi (40%)" value={fmt(order.master_share)} />
+            <InfoRow label="Servis ulushi (60%)" value={fmt(order.service_share)} />
+            <InfoRow label="Yaratilgan" value={fmtDate(order.created_at)} />
+            {order.closed_at && <InfoRow label="Yopilgan" value={fmtDate(order.closed_at)} />}
           </div>
         </div>
 
         <div className="card">
-          <h2 className="font-semibold text-gray-700 mb-3">Problem & Work</h2>
+          <h2 className="font-semibold text-gray-700 mb-3">Muammo va Ish</h2>
           <div className="grid lg:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Problem</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Muammo</p>
               <p>{order.problem || '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Work Performed</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Bajarilgan ish</p>
               <p>{order.work_desc || '—'}</p>
             </div>
           </div>
@@ -134,15 +134,15 @@ export default function AdminOrderDetail() {
 
         {expenses.length > 0 && (
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">🔩 Parts & Expenses</h2>
+            <h2 className="font-semibold text-gray-700 mb-3">🔩 Ehtiyot qismlar va Xarajatlar</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase">
-                    <th className="text-left py-2 pr-3">Item</th>
-                    <th className="text-right py-2 pr-3">Amount</th>
-                    <th className="text-left py-2 pr-3">Added by</th>
-                    <th className="text-left py-2">Receipt</th>
+                    <th className="text-left py-2 pr-3">Nomi</th>
+                    <th className="text-right py-2 pr-3">Summa</th>
+                    <th className="text-left py-2 pr-3">Qo'shgan</th>
+                    <th className="text-left py-2">Chek</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -164,7 +164,7 @@ export default function AdminOrderDetail() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200">
-                    <td className="py-2 font-semibold">Total</td>
+                    <td className="py-2 font-semibold">Jami</td>
                     <td className="py-2 text-right font-bold text-blue-800">{fmt(expenses.reduce((s, e) => s + e.amount, 0))}</td>
                     <td /><td />
                   </tr>
@@ -178,24 +178,24 @@ export default function AdminOrderDetail() {
           <div className="card border-2 border-red-100">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle size={16} className="text-red-600" />
-              <h2 className="font-semibold text-red-700">Admin Actions</h2>
+              <h2 className="font-semibold text-red-700">Admin amallari</h2>
             </div>
-            <p className="text-sm text-gray-500 mb-4">Force close this order regardless of its current status.</p>
+            <p className="text-sm text-gray-500 mb-4">Bu buyurtmani joriy holatidan qat'i nazar majburiy yopish.</p>
             <div className="flex items-center gap-3">
               <input
-                type="number" min="0" placeholder="Parts cost (UZS)"
+                type="number" min="0" placeholder="Qismlar narxi (UZS)"
                 className="input w-52"
                 value={partsCost}
                 onChange={e => setPartsCost(e.target.value)}
               />
-              <button onClick={() => setShowForceClose(true)} className="btn-danger">Force Close</button>
+              <button onClick={() => setShowForceClose(true)} className="btn-danger">Majburiy yopish</button>
             </div>
           </div>
         )}
 
         {logs.length > 0 && (
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-4">Order Log</h2>
+            <h2 className="font-semibold text-gray-700 mb-4">Buyurtma tarixi</h2>
             <div className="relative">
               <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-100" />
               <div className="space-y-4">
@@ -220,9 +220,9 @@ export default function AdminOrderDetail() {
 
       {showForceClose && (
         <ConfirmDialog
-          title="Force Close Order"
-          message={`You are closing order ${orderNumber} as admin. Parts cost: ${partsCost || 0} UZS. This action cannot be undone.`}
-          confirmLabel="Force Close"
+          title="Buyurtmani majburiy yopish"
+          message={`${orderNumber} buyurtma admin sifatida yopilmoqda. Qismlar narxi: ${partsCost || 0} UZS. Bu amalni qaytarib bo'lmaydi.`}
+          confirmLabel="Yopish"
           onClose={() => setShowForceClose(false)}
           onConfirm={handleForceClose}
           loading={closeLoading}

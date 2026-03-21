@@ -12,7 +12,7 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 const STARS = r => '★'.repeat(r) + '☆'.repeat(10 - r)
-const PERIODS = [{ value: 'month', label: 'This Month' }, { value: 'week', label: 'This Week' }, { value: 'all', label: 'All Time' }]
+const PERIODS = [{ value: 'month', label: 'Shu oy' }, { value: 'week', label: 'Shu hafta' }, { value: 'all', label: 'Hammasi' }]
 
 function periodDates(p) {
   const now = new Date()
@@ -57,13 +57,13 @@ export default function AdminMasterProfile() {
       else if (type === 'promote') await setUserRole(Number(id), 'master')
       else if (type === 'demote') await setUserRole(Number(id), 'client')
       setConfirmAction(null); load()
-      showToast('Action completed.')
+      showToast('Amal bajarildi.')
     } catch (e) {
       showToast(e.response?.data?.detail || 'Action failed')
     } finally { setActionLoading(false) }
   }
 
-  if (!profile && !loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Master not found.</div></AdminLayout>
+  if (!profile && !loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Usta topilmadi.</div></AdminLayout>
 
   const user = profile?.user || {}
   const stats = profile?.stats || {}
@@ -71,10 +71,10 @@ export default function AdminMasterProfile() {
   const feedbacks = profile?.feedbacks || []
 
   const kpis = [
-    { label: 'Orders', value: stats.order_count ?? 0 },
-    { label: 'Revenue', value: fmt(stats.revenue) },
-    { label: 'Profit', value: fmt(stats.profit) },
-    { label: 'Master Earned', value: fmt(stats.master_earned) },
+    { label: 'Buyurtmalar', value: stats.order_count ?? 0 },
+    { label: 'Daromad', value: fmt(stats.revenue) },
+    { label: 'Foyda', value: fmt(stats.profit) },
+    { label: 'Usta ulushi', value: fmt(stats.master_earned) },
   ]
 
   return (
@@ -85,27 +85,27 @@ export default function AdminMasterProfile() {
           <button onClick={() => navigate('/admin/masters')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
           <h1 className="text-xl font-bold">{user.full_name || '…'}</h1>
           {user.role && <span className={`text-xs px-2 py-0.5 rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{user.role}</span>}
-          {!user.is_active && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Blocked</span>}
+          {!user.is_active && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Bloklangan</span>}
         </div>
 
         {!loading && (
           <div className="card">
             <div className="flex items-start justify-between">
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-                <span className="text-gray-500">Username</span><span className="font-mono">{user.username || '—'}</span>
-                <span className="text-gray-500">Phone</span><span>{user.phone || '—'}</span>
+                <span className="text-gray-500">Foydalanuvchi nomi</span><span className="font-mono">{user.username || '—'}</span>
+                <span className="text-gray-500">Telefon</span><span>{user.phone || '—'}</span>
                 <span className="text-gray-500">Telegram ID</span><span className="font-mono">{user.telegram_id || '—'}</span>
               </div>
               <div className="flex gap-2">
                 {user.role === 'master' && (
-                  <button onClick={() => setConfirmAction({ type: 'demote' })} className="btn-secondary"><ArrowDown size={14} /> Demote</button>
+                  <button onClick={() => setConfirmAction({ type: 'demote' })} className="btn-secondary"><ArrowDown size={14} /> Tushirish</button>
                 )}
                 {user.role === 'client' && (
-                  <button onClick={() => setConfirmAction({ type: 'promote' })} className="btn-primary"><ArrowUp size={14} /> Promote</button>
+                  <button onClick={() => setConfirmAction({ type: 'promote' })} className="btn-primary"><ArrowUp size={14} /> Ko'tarish</button>
                 )}
                 {user.is_active
-                  ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger"><Ban size={14} /> Block</button>
-                  : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success"><CheckCircle size={14} /> Unblock</button>
+                  ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger"><Ban size={14} /> Bloklash</button>
+                  : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success"><CheckCircle size={14} /> Blokdan chiqarish</button>
                 }
               </div>
             </div>
@@ -143,13 +143,13 @@ export default function AdminMasterProfile() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                    <th className="px-4 py-3">Order #</th>
-                    <th className="px-4 py-3">Car</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Revenue</th>
-                    <th className="px-4 py-3 text-right">Profit</th>
-                    <th className="px-4 py-3 text-right">M.Share</th>
-                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Buyurtma №</th>
+                    <th className="px-4 py-3">Mashina</th>
+                    <th className="px-4 py-3">Holat</th>
+                    <th className="px-4 py-3 text-right">Daromad</th>
+                    <th className="px-4 py-3 text-right">Foyda</th>
+                    <th className="px-4 py-3 text-right">Usta ul.</th>
+                    <th className="px-4 py-3">Sana</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -176,7 +176,7 @@ export default function AdminMasterProfile() {
         {tab === 'feedbacks' && (
           <div className="space-y-3">
             {feedbacks.length === 0
-              ? <div className="card text-center text-gray-400 py-8">No feedbacks yet.</div>
+              ? <div className="card text-center text-gray-400 py-8">Hali fikr-mulohaza yo'q.</div>
               : feedbacks.map(f => (
                 <div key={f.id} className="card">
                   <div className="flex items-center justify-between mb-1">
@@ -194,9 +194,9 @@ export default function AdminMasterProfile() {
 
       {confirmAction && (
         <ConfirmDialog
-          title={confirmAction.type.charAt(0).toUpperCase() + confirmAction.type.slice(1)}
-          message={`Are you sure you want to ${confirmAction.type} ${user.full_name}?`}
-          confirmLabel={confirmAction.type.charAt(0).toUpperCase() + confirmAction.type.slice(1)}
+          title={({ block: 'Bloklash', unblock: 'Blokdan chiqarish', promote: 'Ko\'tarish', demote: 'Tushirish' })[confirmAction.type]}
+          message={`${user.full_name} uchun amalni tasdiqlaysizmi?`}
+          confirmLabel={({ block: 'Bloklash', unblock: 'Blokdan chiqarish', promote: 'Ko\'tarish', demote: 'Tushirish' })[confirmAction.type]}
           onClose={() => setConfirmAction(null)}
           onConfirm={handleAction}
           loading={actionLoading}

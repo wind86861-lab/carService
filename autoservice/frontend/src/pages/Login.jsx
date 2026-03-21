@@ -27,7 +27,7 @@ export default function Login() {
       login(res.data.access_token, userRole)
       navigate(userRole === 'admin' ? '/admin' : '/dashboard')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid username or password')
+      setError(err.response?.data?.detail || 'Noto\'g\'ri foydalanuvchi nomi yoki parol')
     } finally {
       setLoading(false)
     }
@@ -43,31 +43,31 @@ export default function Login() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">AutoService</h1>
-          <p className="text-gray-500 mt-1">Admin & Master Login</p>
+          <p className="text-gray-500 mt-1">Admin va Usta kirish</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Foydalanuvchi nomi</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your username"
+              placeholder="Foydalanuvchi nomini kiriting"
               required
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parol</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter your password"
+              placeholder="Parolni kiriting"
               required
             />
           </div>
@@ -83,12 +83,12 @@ export default function Login() {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Kirish...' : 'Kirish'}
           </button>
         </form>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          Only registered admins and masters can access this panel.
+          Faqat ro'yxatdan o'tgan admin va ustalar kirishi mumkin.
         </p>
       </div>
     </div>

@@ -14,7 +14,7 @@ function fmtDate(d) {
 }
 
 const STATUSES = ['', 'new', 'preparation', 'in_process', 'ready', 'closed']
-const STATUS_LABELS = { '': 'All Statuses', new: 'New', preparation: 'Preparation', in_process: 'In Process', ready: 'Ready', closed: 'Closed' }
+const STATUS_LABELS = { '': 'Barcha holatlar', new: 'Yangi', preparation: 'Tayyorlash', in_process: 'Jarayonda', ready: 'Tayyor', closed: 'Yopilgan' }
 
 export default function AdminOrders() {
   const navigate = useNavigate()
@@ -48,7 +48,7 @@ export default function AdminOrders() {
     <AdminLayout>
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Orders</h1>
+          <h1 className="text-xl font-bold text-gray-900">Buyurtmalar</h1>
           <ExportButton filters={exportFilters} />
         </div>
 
@@ -58,37 +58,39 @@ export default function AdminOrders() {
               {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
             </select>
             <select className="input" value={filters.master_id} onChange={e => setFilter('master_id', e.target.value)}>
-              <option value="">All Masters</option>
+              <option value="">Barcha ustalar</option>
               {masters.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
             </select>
             <input type="date" className="input" value={filters.date_from} onChange={e => setFilter('date_from', e.target.value)} placeholder="From" />
             <input type="date" className="input" value={filters.date_to} onChange={e => setFilter('date_to', e.target.value)} placeholder="To" />
             <div className="flex gap-2">
-              <input className="input flex-1" placeholder="Search order#, plate, client…" value={filters.search} onChange={e => setFilter('search', e.target.value)} />
+              <input className="input flex-1" placeholder="Buyurtma№, raqam, mijoz…" value={filters.search} onChange={e => setFilter('search', e.target.value)} />
               <button type="submit" className="btn-primary px-3"><Search size={16} /></button>
             </div>
           </div>
         </form>
 
         <div className="card p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} orders found</div>
+          <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} ta buyurtma topildi</div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading…</div>
+            <div className="p-8 text-center text-gray-400">Yuklanmoqda…</div>
           ) : orders.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">No orders found.</div>
+            <div className="p-8 text-center text-gray-400">Buyurtmalar topilmadi.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                    <th className="px-4 py-3">Order #</th>
-                    <th className="px-4 py-3">Car / Plate</th>
-                    <th className="px-4 py-3">Client</th>
-                    <th className="px-4 py-3">Master</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Price</th>
-                    <th className="px-4 py-3 text-right">Profit</th>
-                    <th className="px-4 py-3">Created</th>
+                    <th className="px-4 py-3">Buyurtma №</th>
+                    <th className="px-4 py-3">Mashina / Raqam</th>
+                    <th className="px-4 py-3">Mijoz</th>
+                    <th className="px-4 py-3">Usta</th>
+                    <th className="px-4 py-3">Holat</th>
+                    <th className="px-4 py-3 text-right">Narx</th>
+                    <th className="px-4 py-3 text-right">To'langan</th>
+                    <th className="px-4 py-3 text-right">Qismlar</th>
+                    <th className="px-4 py-3 text-right">Foyda</th>
+                    <th className="px-4 py-3">Sana</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -106,6 +108,8 @@ export default function AdminOrders() {
                       <td className="px-4 py-3 text-gray-600">{o.master_name || '—'}</td>
                       <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                       <td className="px-4 py-3 text-right">{fmt(o.agreed_price)}</td>
+                      <td className="px-4 py-3 text-right text-green-700">{fmt(o.paid_amount)}</td>
+                      <td className="px-4 py-3 text-right text-orange-600">{fmt(o.parts_cost)}</td>
                       <td className={`px-4 py-3 text-right ${o.status === 'closed' && Number(o.profit) < 0 ? 'text-red-600' : ''}`}>
                         {o.status === 'closed' ? fmt(o.profit) : '—'}
                       </td>

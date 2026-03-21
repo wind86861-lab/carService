@@ -1,7 +1,7 @@
 import React from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 
-export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onClose, danger = true, loading = false }) {
+export default function ConfirmDialog({ title, message, confirmLabel = 'Tasdiqlash', cancelLabel = 'Bekor qilish', onConfirm, onClose, danger = true, loading = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
@@ -24,7 +24,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm'
             {cancelLabel}
           </button>
           <button onClick={onConfirm} disabled={loading} className={danger ? 'btn-danger' : 'btn-primary'}>
-            {loading ? 'Processing…' : confirmLabel}
+            {loading ? 'Bajarilmoqda…' : confirmLabel}
           </button>
         </div>
       </div>

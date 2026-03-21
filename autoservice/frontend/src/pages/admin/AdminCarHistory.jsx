@@ -39,18 +39,18 @@ export default function AdminCarHistory() {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        <h1 className="text-xl font-bold text-gray-900">Car History</h1>
+        <h1 className="text-xl font-bold text-gray-900">Mashina tarixi</h1>
 
         <div className="card p-4">
           <form onSubmit={handleSearch} className="flex gap-3">
             <input
               className="input flex-1 font-mono uppercase"
-              placeholder="Enter license plate (e.g. 01A123BB)"
+              placeholder="Davlat raqamini kiriting (masalan: 01A123BB)"
               value={query}
               onChange={e => setQuery(e.target.value.toUpperCase())}
             />
             <button type="submit" disabled={loading} className="btn-primary">
-              <Search size={16} /> {loading ? 'Searching…' : 'Search'}
+              <Search size={16} /> {loading ? 'Qidirilmoqda…' : 'Qidirish'}
             </button>
           </form>
         </div>
@@ -59,14 +59,14 @@ export default function AdminCarHistory() {
           visits.length === 0 ? (
             <div className="card text-center py-12">
               <Car className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No history found for plate <span className="font-mono font-bold">{plate}</span>.</p>
+              <p className="text-gray-500"><span className="font-mono font-bold">{plate}</span> raqami bo'yicha tarix topilmadi.</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="font-mono font-bold text-lg text-blue-700">{plate}</span>
                 {carInfo && <span className="text-gray-600">{carInfo}</span>}
-                <span className="text-sm text-gray-400">{visits.length} visit{visits.length !== 1 ? 's' : ''}</span>
+                <span className="text-sm text-gray-400">{visits.length} ta tashrif</span>
               </div>
 
               <div className="relative">
@@ -85,16 +85,16 @@ export default function AdminCarHistory() {
                         </div>
                         <div className="grid lg:grid-cols-2 gap-3 text-sm">
                           <div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Problem</p>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Muammo</p>
                             <p className="text-gray-700">{v.problem || '—'}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Work Performed</p>
+                            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Bajarilgan ish</p>
                             <p className="text-gray-700">{v.work_desc || '—'}</p>
                           </div>
                         </div>
                         <div className="mt-3 pt-3 border-t border-gray-50 flex items-center justify-between text-sm">
-                          <span className="text-gray-500">Master: <span className="text-gray-700">{v.master_name || '—'}</span></span>
+                          <span className="text-gray-500">Usta: <span className="text-gray-700">{v.master_name || '—'}</span></span>
                           <span className="font-semibold">{fmt(v.agreed_price)}</span>
                         </div>
                       </div>

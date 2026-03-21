@@ -10,11 +10,11 @@ function fmtDate(d) {
 }
 
 const PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-  { value: 'last_month', label: 'Last Month' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'today', label: 'Bugun' },
+  { value: 'week', label: 'Shu hafta' },
+  { value: 'month', label: 'Shu oy' },
+  { value: 'last_month', label: 'O\'tgan oy' },
+  { value: 'custom', label: 'Boshqa' },
 ]
 
 function buildDates(period) {
@@ -61,18 +61,18 @@ export default function AdminFinancials() {
   const exportFilters = buildFilters()
 
   const summaryCards = [
-    { label: 'Revenue', value: fmt(summary.total_revenue), color: 'text-blue-700' },
-    { label: 'Parts Cost', value: fmt(summary.total_parts_cost), color: 'text-orange-600' },
-    { label: 'Profit', value: fmt(summary.total_profit), color: Number(summary.total_profit) < 0 ? 'text-red-600' : 'text-gray-900' },
-    { label: 'Service Share (60%)', value: fmt(summary.total_service_share), color: 'text-purple-700' },
-    { label: 'Masters Share (40%)', value: fmt(summary.total_master_share), color: 'text-green-700' },
+    { label: 'Daromad', value: fmt(summary.total_revenue), color: 'text-blue-700' },
+    { label: 'Qismlar narxi', value: fmt(summary.total_parts_cost), color: 'text-orange-600' },
+    { label: 'Foyda', value: fmt(summary.total_profit), color: Number(summary.total_profit) < 0 ? 'text-red-600' : 'text-gray-900' },
+    { label: 'Servis ulushi (60%)', value: fmt(summary.total_service_share), color: 'text-purple-700' },
+    { label: 'Ustalar ulushi (40%)', value: fmt(summary.total_master_share), color: 'text-green-700' },
   ]
 
   return (
     <AdminLayout>
       <div className="p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">Financials</h1>
+          <h1 className="text-xl font-bold text-gray-900">Moliya</h1>
           <ExportButton filters={exportFilters} />
         </div>
 
@@ -89,17 +89,17 @@ export default function AdminFinancials() {
               <input type="date" className="input w-auto text-sm py-1.5" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
               <span className="text-gray-400">—</span>
               <input type="date" className="input w-auto text-sm py-1.5" value={dateTo} onChange={e => setDateTo(e.target.value)} />
-              <button onClick={load} className="btn-primary py-1.5">Apply</button>
+              <button onClick={load} className="btn-primary py-1.5">Qo'llash</button>
             </div>
           )}
           <select className="input w-48 ml-auto" value={masterId} onChange={e => setMasterId(e.target.value)}>
-            <option value="">All Masters</option>
+            <option value="">Barcha ustalar</option>
             {masters.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
           </select>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Loading…</div>
+          <div className="text-center py-12 text-gray-400">Yuklanmoqda…</div>
         ) : (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -113,20 +113,20 @@ export default function AdminFinancials() {
 
             {orders.length > 0 ? (
               <div className="card p-0 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-50 text-sm font-medium text-gray-700">{orders.length} closed orders</div>
+                <div className="px-4 py-3 border-b border-gray-50 text-sm font-medium text-gray-700">{orders.length} ta yopilgan buyurtma</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                        <th className="px-4 py-3">Order #</th>
-                        <th className="px-4 py-3">Master</th>
-                        <th className="px-4 py-3">Car</th>
-                        <th className="px-4 py-3 text-right">Revenue</th>
-                        <th className="px-4 py-3 text-right">Parts</th>
-                        <th className="px-4 py-3 text-right">Profit</th>
-                        <th className="px-4 py-3 text-right">M.Share</th>
-                        <th className="px-4 py-3 text-right">S.Share</th>
-                        <th className="px-4 py-3">Closed</th>
+                        <th className="px-4 py-3">Buyurtma №</th>
+                        <th className="px-4 py-3">Usta</th>
+                        <th className="px-4 py-3">Mashina</th>
+                        <th className="px-4 py-3 text-right">Daromad</th>
+                        <th className="px-4 py-3 text-right">Qismlar</th>
+                        <th className="px-4 py-3 text-right">Foyda</th>
+                        <th className="px-4 py-3 text-right">Usta ul.</th>
+                        <th className="px-4 py-3 text-right">Servis ul.</th>
+                        <th className="px-4 py-3">Yopilgan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -151,7 +151,7 @@ export default function AdminFinancials() {
                 </div>
               </div>
             ) : (
-              <div className="card text-center py-12 text-gray-400">No closed orders in this period.</div>
+              <div className="card text-center py-12 text-gray-400">Bu davrda yopilgan buyurtmalar yo'q.</div>
             )}
           </>
         )}

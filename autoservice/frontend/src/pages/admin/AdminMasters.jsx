@@ -37,7 +37,7 @@ export default function AdminMasters() {
       else if (type === 'demote') await setUserRole(id, 'client')
       setConfirmAction(null)
       load(page)
-      showToast('Action completed.')
+      showToast('Amal bajarildi.')
     } catch (e) {
       showToast(e.response?.data?.detail || 'Action failed')
     } finally { setActionLoading(false) }
@@ -47,24 +47,24 @@ export default function AdminMasters() {
     <AdminLayout>
       {toast && <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">{toast}</div>}
       <div className="p-6 space-y-4">
-        <h1 className="text-xl font-bold text-gray-900">Masters</h1>
+        <h1 className="text-xl font-bold text-gray-900">Ustalar</h1>
         <div className="card p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} masters</div>
+          <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} ta usta</div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading…</div>
+            <div className="p-8 text-center text-gray-400">Yuklanmoqda…</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                      <th className="px-4 py-3">Name</th>
-                      <th className="px-4 py-3">Phone</th>
-                      <th className="px-4 py-3 text-right">Active</th>
-                      <th className="px-4 py-3 text-right">Closed</th>
-                      <th className="px-4 py-3 text-right">Total Earned</th>
-                      <th className="px-4 py-3 text-right">Avg Rating</th>
-                      <th className="px-4 py-3">Role / Status</th>
+                      <th className="px-4 py-3">Ism</th>
+                      <th className="px-4 py-3">Telefon</th>
+                      <th className="px-4 py-3 text-right">Faol</th>
+                      <th className="px-4 py-3 text-right">Yopilgan</th>
+                      <th className="px-4 py-3 text-right">Jami daromad</th>
+                      <th className="px-4 py-3 text-right">O'rtacha baho</th>
+                      <th className="px-4 py-3">Rol / Holat</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -83,7 +83,7 @@ export default function AdminMasters() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <span className={`text-xs px-2 py-0.5 rounded-full ${m.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{m.role}</span>
-                            {!m.is_active && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Blocked</span>}
+                            {!m.is_active && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Bloklangan</span>}
                           </div>
                         </td>
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -98,9 +98,9 @@ export default function AdminMasters() {
                             )}
                             {m.is_active
                               ? <button title="Block" onClick={() => setConfirmAction({ id: m.id, type: 'block', name: m.full_name })}
-                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded"><Ban size={14} /></button>
+                                className="p-1.5 text-red-500 hover:bg-red-50 rounded"><Ban size={14} /></button>
                               : <button title="Unblock" onClick={() => setConfirmAction({ id: m.id, type: 'unblock', name: m.full_name })}
-                                  className="p-1.5 text-green-500 hover:bg-green-50 rounded"><CheckCircle size={14} /></button>
+                                className="p-1.5 text-green-500 hover:bg-green-50 rounded"><CheckCircle size={14} /></button>
                             }
                           </div>
                         </td>
@@ -119,9 +119,9 @@ export default function AdminMasters() {
 
       {confirmAction && (
         <ConfirmDialog
-          title={`${confirmAction.type.charAt(0).toUpperCase() + confirmAction.type.slice(1)} User`}
-          message={`Are you sure you want to ${confirmAction.type} ${confirmAction.name}?`}
-          confirmLabel={confirmAction.type.charAt(0).toUpperCase() + confirmAction.type.slice(1)}
+          title={({ block: 'Bloklash', unblock: 'Blokdan chiqarish', promote: 'Ustaga ko\'tarish', demote: 'Mijozga tushirish' })[confirmAction.type]}
+          message={`${confirmAction.name} uchun amalni tasdiqlaysizmi?`}
+          confirmLabel={({ block: 'Bloklash', unblock: 'Blokdan chiqarish', promote: 'Ko\'tarish', demote: 'Tushirish' })[confirmAction.type]}
           onClose={() => setConfirmAction(null)}
           onConfirm={handleAction}
           loading={actionLoading}

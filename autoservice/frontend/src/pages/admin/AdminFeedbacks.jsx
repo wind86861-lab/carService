@@ -48,7 +48,7 @@ export default function AdminFeedbacks() {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        <h1 className="text-xl font-bold text-gray-900">Feedbacks</h1>
+        <h1 className="text-xl font-bold text-gray-900">Fikr-mulohazalar</h1>
 
         {stats && (
           <>
@@ -62,11 +62,11 @@ export default function AdminFeedbacks() {
                     <span key={i} className={i < Math.round(stats.avg_rating) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500">{stats.total} total reviews</p>
+                <p className="text-sm text-gray-500">{stats.total} ta fikr-mulohaza</p>
               </div>
 
               <div className="card lg:col-span-2">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Score Distribution</h3>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Baho taqsimoti</h3>
                 <div className="space-y-1.5">
                   {(stats.distribution || []).map(d => (
                     <div key={d.score} className="flex items-center gap-2 text-xs">
@@ -97,14 +97,14 @@ export default function AdminFeedbacks() {
 
             {stats.masters?.length > 0 && (
               <div className="card p-0 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-50 font-medium text-sm text-gray-700">Master Rankings</div>
+                <div className="px-4 py-3 border-b border-gray-50 font-medium text-sm text-gray-700">Ustalar reytingi</div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                        <th className="px-4 py-3">Master</th>
-                        <th className="px-4 py-3 text-right">Avg Rating</th>
-                        <th className="px-4 py-3 text-right">Reviews</th>
+                        <th className="px-4 py-3">Usta</th>
+                        <th className="px-4 py-3 text-right">O'rtacha baho</th>
+                        <th className="px-4 py-3 text-right">Fikrlar</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -129,36 +129,36 @@ export default function AdminFeedbacks() {
 
         <div className="card p-4 flex flex-wrap gap-3">
           <select className="input w-48" value={filters.master_id} onChange={e => setFilter('master_id', e.target.value)}>
-            <option value="">All Masters</option>
+            <option value="">Barcha ustalar</option>
             {masters.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
           </select>
           <select className="input w-40" value={filters.rating_max} onChange={e => setFilter('rating_max', e.target.value)}>
-            <option value="">All Ratings</option>
+            <option value="">Barcha baholar</option>
             {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>≤ {n} stars</option>)}
           </select>
           <input type="date" className="input w-auto text-sm" value={filters.date_from} onChange={e => setFilter('date_from', e.target.value)} />
           <input type="date" className="input w-auto text-sm" value={filters.date_to} onChange={e => setFilter('date_to', e.target.value)} />
-          <button onClick={() => loadFeedbacks(1)} className="btn-primary">Apply</button>
-          <button onClick={() => { setFilters({ master_id: '', rating_max: '', date_from: '', date_to: '' }); loadFeedbacks(1) }} className="btn-secondary">Reset</button>
+          <button onClick={() => loadFeedbacks(1)} className="btn-primary">Qo'llash</button>
+          <button onClick={() => { setFilters({ master_id: '', rating_max: '', date_from: '', date_to: '' }); loadFeedbacks(1) }} className="btn-secondary">Tozalash</button>
         </div>
 
         <div className="card p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} feedbacks</div>
+          <div className="px-4 py-3 border-b border-gray-50 text-sm text-gray-500">{total} ta fikr-mulohaza</div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading…</div>
+            <div className="p-8 text-center text-gray-400">Yuklanmoqda…</div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 text-xs font-medium text-gray-500 uppercase text-left">
-                      <th className="px-4 py-3">Rating</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Comment</th>
-                      <th className="px-4 py-3">Client</th>
-                      <th className="px-4 py-3">Master</th>
-                      <th className="px-4 py-3">Order #</th>
-                      <th className="px-4 py-3">Date</th>
+                      <th className="px-4 py-3">Baho</th>
+                      <th className="px-4 py-3">Kategoriya</th>
+                      <th className="px-4 py-3">Izoh</th>
+                      <th className="px-4 py-3">Mijoz</th>
+                      <th className="px-4 py-3">Usta</th>
+                      <th className="px-4 py-3">Buyurtma №</th>
+                      <th className="px-4 py-3">Sana</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
