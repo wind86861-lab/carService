@@ -231,22 +231,17 @@ export default function AdminOrderDetail() {
       )}
 
       {receiptUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setReceiptUrl(null)}>
-          <div className="relative max-w-3xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+          <div className="relative" onClick={e => e.stopPropagation()}>
             <button onClick={() => setReceiptUrl(null)}
-              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-900 z-10">
+              className="absolute -top-4 -right-4 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:text-red-600 z-50 text-lg font-bold">
               ✕
             </button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-              </div>
-              <img src={receiptUrl} alt="Chek"
-                className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain bg-white relative z-10"
-                onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.querySelector('div').innerHTML = '<p class="text-white text-sm p-8">Rasm yuklanmadi</p>' }}
-              />
-            </div>
+            <img src={receiptUrl} alt="Chek"
+              className="max-w-[90vw] max-h-[85vh] rounded-xl shadow-2xl object-contain bg-white"
+              onError={(e) => { e.target.onerror = null; e.target.src = ''; e.target.alt = 'Rasm yuklanmadi'; e.target.className = 'p-12 text-white text-sm' }}
+            />
           </div>
         </div>
       )}
