@@ -54,13 +54,13 @@ export default function Statistics() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
           <h1 className="text-lg font-bold">Statistics</h1>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="card">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex gap-1 flex-wrap">
@@ -68,9 +68,8 @@ export default function Statistics() {
                 <button
                   key={p.value}
                   onClick={() => setPeriod(p.value)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    period === p.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === p.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
                 >{p.label}</button>
               ))}
             </div>
@@ -123,7 +122,7 @@ export default function Statistics() {
                       {orders.map(o => (
                         <tr key={o.order_number} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 font-mono font-bold text-blue-700">{o.order_number}</td>
-                          <td className="px-4 py-3">{`${o.brand||''} ${o.model||''}`.trim() || '—'}</td>
+                          <td className="px-4 py-3">{`${o.brand || ''} ${o.model || ''}`.trim() || '—'}</td>
                           <td className="px-4 py-3 text-right">{fmt(o.agreed_price)}</td>
                           <td className="px-4 py-3 text-right text-orange-600">{fmt(o.parts_cost)}</td>
                           <td className={`px-4 py-3 text-right font-medium ${Number(o.profit) < 0 ? 'text-red-600' : ''}`}>{fmt(o.profit)}</td>

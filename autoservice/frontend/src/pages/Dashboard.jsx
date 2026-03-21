@@ -41,33 +41,33 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-900">AutoService Dashboard</h1>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/profile')} className="btn-secondary">
-              <UserCircle size={16} /> Profile
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
+          <h1 className="text-sm sm:text-lg font-bold text-gray-900 whitespace-nowrap">AutoService<span className="hidden sm:inline"> Dashboard</span></h1>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <button onClick={() => navigate('/profile')} className="btn-secondary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <UserCircle size={16} /> <span className="hidden sm:inline">Profile</span>
             </button>
-            <button onClick={() => navigate('/statistics')} className="btn-secondary">
-              <BarChart2 size={16} /> Statistics
+            <button onClick={() => navigate('/statistics')} className="btn-secondary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <BarChart2 size={16} /> <span className="hidden sm:inline">Statistics</span>
             </button>
-            <button onClick={() => navigate('/new-order')} className="btn-primary">
-              <Plus size={16} /> New Order
+            <button onClick={() => navigate('/new-order')} className="btn-primary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+              <Plus size={16} /> <span className="hidden sm:inline">New Order</span>
             </button>
-            <button onClick={() => { logout(); navigate('/login') }} className="btn-secondary text-red-600">
+            <button onClick={() => { logout(); navigate('/login') }} className="btn-secondary text-red-600 px-2 sm:px-3 py-1.5 sm:py-2">
               <LogOut size={16} />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {cards.map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="card">
               <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center mb-3`}>
                 <Icon size={20} className={color} />
               </div>
-              <p className="text-2xl font-bold text-gray-900">{loading ? '…' : value}</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900">{loading ? '…' : value}</p>
               <p className="text-sm text-gray-500 mt-0.5">{label}</p>
             </div>
           ))}

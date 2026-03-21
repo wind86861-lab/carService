@@ -99,7 +99,7 @@ export default function OrderDetail() {
       )}
 
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
           <span className="font-mono font-bold text-blue-700 text-lg">{order.order_number}</span>
           <StatusBadge status={order.status} size="lg" />
@@ -109,7 +109,7 @@ export default function OrderDetail() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {photos.length > 0 && (
           <div className="card p-0 overflow-hidden">
             <div className="relative bg-black aspect-video max-h-72">
@@ -136,7 +136,7 @@ export default function OrderDetail() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="card">
             <h2 className="font-semibold text-gray-700 mb-3">Car & Client</h2>
             <InfoRow label="Car" value={`${order.brand || ''} ${order.model || ''}`.trim()} />
@@ -209,9 +209,9 @@ export default function OrderDetail() {
                       <td className="py-2">
                         {e.receipt_url
                           ? <a href={e.receipt_url} target="_blank" rel="noreferrer"
-                              className="inline-block">
-                              <img src={e.receipt_url} alt="receipt" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
-                            </a>
+                            className="inline-block">
+                            <img src={e.receipt_url} alt="receipt" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
+                          </a>
                           : <span className="text-gray-300 text-xs">—</span>
                         }
                       </td>
