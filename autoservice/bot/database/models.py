@@ -304,11 +304,12 @@ async def link_client_to_order(order_number: str, client_id: int):
 
 
 async def confirm_client_receipt(order_number: str):
-    """Set client_confirmed to true on the order."""
+    """Set client_confirmed to true and close the order."""
     async with async_session() as session:
         await session.execute(
             text(
-                "UPDATE orders SET client_confirmed = TRUE WHERE order_number = :num"
+                "UPDATE orders SET client_confirmed = TRUE, status = 'closed', closed_at = NOW() "
+                "WHERE order_number = :num"
             ),
             {"num": order_number},
         )
