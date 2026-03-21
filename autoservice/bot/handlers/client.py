@@ -232,7 +232,21 @@ async def confirm_receipt_callback(callback: CallbackQuery, state: FSMContext, d
     order = await get_order_by_number(order_number)
     if order and order["client_confirmed"]:
         await callback.answer(t("already_confirmed", lang), show_alert=True); return
-    await confirm_client_receipt(order_number)
+    agreed = order.get("agreed_price", 0) or 0
+    parts = order.get("parts_cost", 0) or 0
+    profit = max(0, agreed - parts)
+    ratio = 0.40
+    if order and order.get("master_id"):
+        from bot.database.models import get_master_total_earnings
+        total = await get_master_total_earnings(order["master_id"])
+        if total >= 15_000_000:
+            ratio = 0.50
+        elif total >= 10_000_000:
+            ratio = 0.45
+    master_share = int(profit * ratio)
+    service_share = profit - master_share
+    await confirm_client_receipt(order_number, profit=profit,
+                                 master_share=master_share, service_share=service_share)
     new_text = (callback.message.text or "") + "\n\n" + t("confirm_receipt_done", lang)
     await callback.message.edit_text(new_text, reply_markup=None)
     order = await get_order_by_number(order_number)

@@ -303,15 +303,25 @@ async def link_client_to_order(order_number: str, client_id: int):
             )
 
 
-async def confirm_client_receipt(order_number: str):
-    """Set client_confirmed to true and close the order."""
+async def confirm_client_receipt(
+    order_number: str,
+    profit: int = 0,
+    master_share: int = 0,
+    service_share: int = 0,
+):
+    """Set client_confirmed, calculate financials, and close the order."""
     async with async_session() as session:
         await session.execute(
             text(
-                "UPDATE orders SET client_confirmed = TRUE, status = 'closed', closed_at = NOW() "
+                "UPDATE orders SET client_confirmed = TRUE, "
+                "profit = :profit, master_share = :ms, service_share = :ss, "
+                "status = 'closed', closed_at = NOW() "
                 "WHERE order_number = :num"
             ),
-            {"num": order_number},
+            {
+                "profit": profit, "ms": master_share,
+                "ss": service_share, "num": order_number,
+            },
         )
         await session.commit()
 
