@@ -31,6 +31,7 @@ export default function AdminOrderDetail() {
   const [closeLoading, setCloseLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [receiptUrl, setReceiptUrl] = useState(null)
 
   const reload = () => {
     getAdminOrderDetail(orderNumber).then(setOrder).catch(console.error).finally(() => setLoading(false))
@@ -153,9 +154,9 @@ export default function AdminOrderDetail() {
                       <td className="py-2 pr-3 text-gray-500 text-xs">{e.added_by_name || '—'}</td>
                       <td className="py-2">
                         {e.receipt_url
-                          ? <a href={e.receipt_url} target="_blank" rel="noreferrer">
-                            <img src={e.receipt_url} alt="receipt" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
-                          </a>
+                          ? <button onClick={() => setReceiptUrl(e.receipt_url)} className="cursor-pointer">
+                            <img src={e.receipt_url} alt="chek" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
+                          </button>
                           : <span className="text-gray-300 text-xs">—</span>
                         }
                       </td>
@@ -227,6 +228,19 @@ export default function AdminOrderDetail() {
           onConfirm={handleForceClose}
           loading={closeLoading}
         />
+      )}
+
+      {receiptUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setReceiptUrl(null)}>
+          <div className="relative max-w-3xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setReceiptUrl(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-900 z-10">
+              ✕
+            </button>
+            <img src={receiptUrl} alt="Chek" className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain bg-white" />
+          </div>
+        </div>
       )}
     </AdminLayout>
   )

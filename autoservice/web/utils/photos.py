@@ -51,5 +51,5 @@ def is_telegram_file_id(value: str) -> bool:
 def get_photo_url(filename: str) -> str:
     """Return the public URL for a stored photo or a Telegram file_id proxy URL."""
     if is_telegram_file_id(filename):
-        return f"{WEB_URL}/tg-photo/{filename}"
-    return f"{WEB_URL}/uploads/{filename}"
+        return f"/tg-photo/{filename}"
+    return f"/uploads/{filename}"
