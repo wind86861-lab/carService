@@ -525,9 +525,16 @@ STRINGS: dict[str, dict[str, str]] = {
 }
 
 
-def all_variants(key: str) -> set:
-    """Return all language variants of a key (for handler filter matching)."""
-    return {v for lang in STRINGS for v in [STRINGS[lang].get(key)] if v}
+def all_variants(key: str) -> list:
+    """Return all language variants of a key as a list (for handler filter matching)."""
+    seen: set = set()
+    result: list = []
+    for lang in STRINGS:
+        v = STRINGS[lang].get(key)
+        if v and v not in seen:
+            seen.add(v)
+            result.append(v)
+    return result
 
 
 def t(key: str, lang: str = "uz", **kwargs) -> str:

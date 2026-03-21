@@ -230,7 +230,9 @@ def get_master_order_detail_keyboard(
         close_label = "💰 Moliyaviy hisobotni yopish" if lang == "uz" else "💰 Закрыть финансово"
         buttons.append([InlineKeyboardButton(text=close_label, callback_data=f"mst_close:{order_number}")])
     if current_status != "closed" and BOT_USERNAME:
-        url = f"https://t.me/{BOT_USERNAME}?start={order_number}"
+        from urllib.parse import quote as _quote
+        deep_link = f"https://t.me/{BOT_USERNAME}?start={order_number}"
+        url = f"https://t.me/share/url?url={_quote(deep_link, safe='')}"
         share_label = t("share_btn_linked" if has_client else "share_btn", lang)
         buttons.append([InlineKeyboardButton(text=share_label, url=url)])
     back_label = "◄️ Orqaga" if lang == "uz" else "◄️ Назад"
@@ -241,7 +243,9 @@ def get_master_order_detail_keyboard(
 def get_share_order_keyboard(order_number: str, has_client: bool = False, lang: str = "uz") -> InlineKeyboardMarkup:
     """Return inline keyboard with a URL deep-link button for sharing the order with a client."""
     from bot.config import BOT_USERNAME
-    url = f"https://t.me/{BOT_USERNAME}?start={order_number}"
+    from urllib.parse import quote as _quote
+    deep_link = f"https://t.me/{BOT_USERNAME}?start={order_number}"
+    url = f"https://t.me/share/url?url={_quote(deep_link, safe='')}"
     label = t("share_btn_linked" if has_client else "share_btn", lang)
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=label, url=url)],

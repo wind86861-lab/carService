@@ -61,7 +61,7 @@ async def start_handler(message: Message, state: FSMContext, db_user: dict):
         )
         return
 
-    if pending_order:
+    if pending_order and db_user.get("role") == "client":
         await _try_link_order(message, pending_order, db_user)
 
     role = db_user["role"]

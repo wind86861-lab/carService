@@ -751,6 +751,8 @@ async def master_add_parts_receipt(message: Message, state: FSMContext, db_user:
 
 @router.message(F.text.in_(all_variants("btn_statistics")))
 async def master_statistics_handler(message: Message, db_user: dict):
+    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
+        return
     from datetime import datetime
     lang = lang_of(db_user)
     now = datetime.now()
