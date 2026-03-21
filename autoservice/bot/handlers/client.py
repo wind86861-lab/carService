@@ -14,6 +14,7 @@ from bot.keyboards.inline import (
     get_positive_category_keyboard,
     get_comment_skip_inline,
     get_load_more_keyboard,
+    get_rating_keyboard,
 )
 from bot.database.models import (
     get_expenses_by_order,
@@ -225,7 +226,7 @@ async def view_photos_callback(callback: CallbackQuery, db_user: dict):
 
 
 @router.callback_query(F.data.startswith("confirm_receipt:"))
-async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: Bot):
+async def confirm_receipt_callback(callback: CallbackQuery, state: FSMContext, db_user: dict, bot: Bot):
     lang = lang_of(db_user)
     order_number = callback.data.split(":", 1)[1]
     order = await get_order_by_number(order_number)
@@ -241,9 +242,14 @@ async def confirm_receipt_callback(callback: CallbackQuery, db_user: dict, bot: 
             master_lang = master.get("language") or "uz"
             notify_master_receipt_confirmed(master["telegram_id"], order_number, lang=master_lang)
     if order:
-        from aiogram import Dispatcher
-        dp = Dispatcher.get_current()
-        await schedule_feedback_request(bot, db_user["telegram_id"], order["id"], order_number, dp)
+        from bot.database.models import get_feedback_by_order
+        existing = await get_feedback_by_order(order["id"])
+        if not existing:
+            await state.update_data(feedback_order_id=order["id"])
+            await callback.message.answer(
+                t("feedback_request", lang, order_number=order_number),
+                reply_markup=get_rating_keyboard(),
+            )
     await callback.answer()
 
 
