@@ -5,7 +5,7 @@ import axios from 'axios'
 
 export default function Login({ mode = 'master' }) {
   const isAdmin = mode === 'admin'
-  const { login, token, role } = useAuth()
+  const { login, logout, token, role } = useAuth()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -14,10 +14,11 @@ export default function Login({ mode = 'master' }) {
 
   useEffect(() => {
     if (token) {
-      if (role === 'admin') navigate('/admin', { replace: true })
-      else navigate('/dashboard', { replace: true })
+      if (isAdmin && role === 'admin') navigate('/admin', { replace: true })
+      else if (!isAdmin && role !== 'admin') navigate('/dashboard', { replace: true })
+      else { logout() }
     }
-  }, [token, role, navigate])
+  }, [token, role, navigate, isAdmin])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
