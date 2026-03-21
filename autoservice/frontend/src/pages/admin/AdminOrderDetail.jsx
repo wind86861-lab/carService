@@ -238,7 +238,15 @@ export default function AdminOrderDetail() {
               className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-900 z-10">
               ✕
             </button>
-            <img src={receiptUrl} alt="Chek" className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain bg-white" />
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+              </div>
+              <img src={receiptUrl} alt="Chek"
+                className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain bg-white relative z-10"
+                onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.querySelector('div').innerHTML = '<p class="text-white text-sm p-8">Rasm yuklanmadi</p>' }}
+              />
+            </div>
           </div>
         </div>
       )}
