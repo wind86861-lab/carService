@@ -368,7 +368,8 @@ async def _build_order_list(master_id: int, page: int = 1):
     return active, page_items, total, total_pages, page
 
 
-def _is_master_or_admin(message: Message, db_user: dict) -> bool:
+def _is_master_or_admin(message: Message, **kwargs) -> bool:
+    db_user = kwargs.get("db_user")
     return isinstance(db_user, dict) and db_user.get("role") in ("master", "admin")
 
 

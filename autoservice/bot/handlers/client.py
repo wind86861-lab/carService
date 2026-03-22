@@ -213,7 +213,8 @@ async def client_status_handler(message: Message, db_user: dict):
 # ------------------------------------------------------------------
 
 
-def _is_client_role(message: Message, db_user: dict) -> bool:
+def _is_client_role(message: Message, **kwargs) -> bool:
+    db_user = kwargs.get("db_user")
     return isinstance(db_user, dict) and db_user.get("role") == "client"
 
 
