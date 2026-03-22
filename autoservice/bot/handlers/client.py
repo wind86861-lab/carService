@@ -319,8 +319,8 @@ async def confirm_receipt_callback(callback: CallbackQuery, state: FSMContext, d
     order = await get_order_by_number(order_number)
     if order and order["client_confirmed"]:
         await callback.answer(t("already_confirmed", lang), show_alert=True); return
-    agreed = order.get("agreed_price", 0) or 0
-    parts = order.get("parts_cost", 0) or 0
+    agreed = int(order.get("agreed_price", 0) or 0)
+    parts = int(order.get("parts_cost", 0) or 0)
     profit = max(0, agreed - parts)
     ratio = 0.40
     if order and order.get("master_id"):
