@@ -32,6 +32,7 @@ from bot.database.models import (
 from bot.utils.formatters import (
     build_order_card,
     build_order_summary,
+    format_money,
     format_order_status,
 )
 from bot.utils.notifications import (
@@ -342,7 +343,11 @@ async def confirm_receipt_callback(callback: CallbackQuery, state: FSMContext, d
         master = await get_user_by_id(order["master_id"])
         if master:
             master_lang = master.get("language") or "uz"
-            notify_master_receipt_confirmed(master["telegram_id"], order_number, lang=master_lang)
+            paid_total = format_money(int(order.get("agreed_price") or 0))
+            notify_master_receipt_confirmed(
+                master["telegram_id"], order_number,
+                paid_amount=paid_total, lang=master_lang,
+            )
     if order:
         from bot.database.models import get_feedback_by_order
         existing = await get_feedback_by_order(order["id"])

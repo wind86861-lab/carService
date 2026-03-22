@@ -523,7 +523,17 @@ async def master_status_change_callback(callback: CallbackQuery, db_user: dict):
                     client["telegram_id"], order_number, new_status, car_info, lang=client_lang
                 )
                 if new_status == "ready":
-                    notify_client_receipt_request(client["telegram_id"], order_number, lang=client_lang)
+                    agreed = int(order_now.get("agreed_price") or 0)
+                    paid = int(order_now.get("paid_amount") or 0)
+                    remaining = max(0, agreed - paid)
+                    notify_client_receipt_request(
+                        client["telegram_id"], order_number,
+                        car_info=car_info,
+                        agreed_price=format_money(agreed),
+                        paid_amount=format_money(paid),
+                        remaining=format_money(remaining),
+                        lang=client_lang,
+                    )
     except Exception:
         logger.warning("Failed to notify client for order %s", order_number)
 

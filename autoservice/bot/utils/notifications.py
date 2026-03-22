@@ -51,24 +51,32 @@ def notify_client_status_changed(
 
 
 def notify_client_receipt_request(
-    client_telegram_id: int, order_number: str, lang: str = "uz"
+    client_telegram_id: int, order_number: str,
+    car_info: str = "—", agreed_price: str = "0",
+    paid_amount: str = "0", remaining: str = "0",
+    lang: str = "uz",
 ) -> None:
     """Enqueue the receipt confirmation message with confirmation keyboard."""
-    text = t("notif_receipt_request", lang, order_number=order_number)
+    text = t("notif_receipt_request", lang,
+             order_number=order_number, car_info=car_info,
+             agreed_price=agreed_price, paid_amount=paid_amount,
+             remaining=remaining)
     _q().enqueue(
         telegram_id=client_telegram_id,
         message=text,
-        reply_markup=get_confirmation_keyboard(order_number),
+        reply_markup=get_confirmation_keyboard(order_number, remaining=remaining, lang=lang),
     )
 
 
 def notify_master_receipt_confirmed(
-    master_telegram_id: int, order_number: str, lang: str = "uz"
+    master_telegram_id: int, order_number: str,
+    paid_amount: str = "0", lang: str = "uz",
 ) -> None:
     """Enqueue notification to master that client confirmed receipt."""
     _q().enqueue(
         telegram_id=master_telegram_id,
-        message=t("notif_master_receipt_confirmed", lang, order_number=order_number),
+        message=t("notif_master_receipt_confirmed", lang,
+                   order_number=order_number, paid_amount=paid_amount),
     )
 
 

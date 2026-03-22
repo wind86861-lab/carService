@@ -32,9 +32,9 @@ async def send_bot_notification(
         return False
 
 
-def _confirmation_keyboard_dict(order_number: str) -> dict:
+def _confirmation_keyboard_dict(order_number: str, remaining: str = "0", lang: str = "uz") -> dict:
     """Serialize confirmation inline keyboard to Telegram API format."""
-    kb = get_confirmation_keyboard(order_number)
+    kb = get_confirmation_keyboard(order_number, remaining=remaining, lang=lang)
     return {
         "inline_keyboard": [
             [{"text": btn.text, "callback_data": btn.callback_data} for btn in row]
@@ -53,10 +53,18 @@ async def notify_status_changed(client_telegram_id: int, order_number: str, stat
     await send_bot_notification(client_telegram_id, text)
 
 
-async def notify_receipt_request(client_telegram_id: int, order_number: str):
+async def notify_receipt_request(
+    client_telegram_id: int, order_number: str,
+    car_info: str = "—", agreed_price: str = "0",
+    paid_amount: str = "0", remaining: str = "0",
+):
     text = (
-        f"<b>Order {order_number}</b>\n\n"
-        "The master has marked your order as complete. Have you received your car?"
+        f"📋 <b>Order {order_number}</b>\n"
+        f"🚗 {car_info}\n\n"
+        f"💰 Price: <b>{agreed_price}</b>\n"
+        f"✅ Paid: <b>{paid_amount}</b>\n"
+        f"💵 Remaining: <b>{remaining}</b>\n\n"
+        f"Did you pay <b>{remaining}</b> and receive your car?"
     )
-    keyboard = _confirmation_keyboard_dict(order_number)
+    keyboard = _confirmation_keyboard_dict(order_number, remaining=remaining)
     await send_bot_notification(client_telegram_id, text, reply_markup=keyboard)

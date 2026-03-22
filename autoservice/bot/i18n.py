@@ -54,8 +54,13 @@ STRINGS: dict[str, dict[str, str]] = {
             "Mashinangiz tayyor. Olib ketishingiz mumkin! 🚗"
         ),
         "notif_receipt_request": (
-            "📋 <b>Buyurtma {order_number}</b>\n\n"
-            "Usta buyurtmani tugalladi. Mashinangizni qabul qildingizmi?"
+            "📋 <b>Buyurtma {order_number}</b>\n"
+            "🚗 Mashina: {car_info}\n\n"
+            "Usta buyurtmani tugalladi.\n\n"
+            "💰 Kelishilgan narx: <b>{agreed_price}</b>\n"
+            "✅ To'langan: <b>{paid_amount}</b>\n"
+            "💵 Qoldiq: <b>{remaining}</b>\n\n"
+            "Siz <b>{remaining}</b> to'ladingizmi va mashinangizni oldingizmi?"
         ),
         "notif_status_generic": (
             "<b>Buyurtma {order_number}</b>\n\n"
@@ -64,7 +69,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # --- Notifications to master ---
         "notif_master_receipt_confirmed": (
             "✅ <b>Buyurtma {order_number}</b>\n\n"
-            "Mijoz mashinani qabul qilganini tasdiqladi. Buyurtma to'liq yopildi."
+            "Mijoz mashinani qabul qilganini tasdiqladi.\n"
+            "💰 To'langan summa: <b>{paid_amount}</b>\n\n"
+            "Buyurtma to'liq yopildi."
         ),
         "notif_master_dispute": (
             "⚠️ <b>Buyurtma {order_number}</b>\n\n"
@@ -331,8 +338,13 @@ STRINGS: dict[str, dict[str, str]] = {
             "Ваш автомобиль готов. Можете забрать! 🚗"
         ),
         "notif_receipt_request": (
-            "📋 <b>Заказ {order_number}</b>\n\n"
-            "Мастер завершил заказ. Вы получили свой автомобиль?"
+            "📋 <b>Заказ {order_number}</b>\n"
+            "🚗 Авто: {car_info}\n\n"
+            "Мастер завершил заказ.\n\n"
+            "💰 Согласованная цена: <b>{agreed_price}</b>\n"
+            "✅ Оплачено: <b>{paid_amount}</b>\n"
+            "💵 Остаток: <b>{remaining}</b>\n\n"
+            "Вы оплатили <b>{remaining}</b> и забрали автомобиль?"
         ),
         "notif_status_generic": (
             "<b>Заказ {order_number}</b>\n\n"
@@ -341,7 +353,9 @@ STRINGS: dict[str, dict[str, str]] = {
         # --- Notifications to master ---
         "notif_master_receipt_confirmed": (
             "✅ <b>Заказ {order_number}</b>\n\n"
-            "Клиент подтвердил получение автомобиля. Заказ полностью закрыт."
+            "Клиент подтвердил получение автомобиля.\n"
+            "💰 Оплаченная сумма: <b>{paid_amount}</b>\n\n"
+            "Заказ полностью закрыт."
         ),
         "notif_master_dispute": (
             "⚠️ <b>Заказ {order_number}</b>\n\n"

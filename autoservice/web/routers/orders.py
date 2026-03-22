@@ -128,9 +128,21 @@ async def update_status(
     if order.get("client_id"):
         from bot.database.models import get_user_by_id
         client = await get_user_by_id(order["client_id"])
-        if client:
-            car_info = f"{order.get('brand', '')} {order.get('model', '')}".strip()
+        if client and client.get("telegram_id"):
+            car_info = f"{order.get('brand', '')} {order.get('model', '')}".strip() or "—"
             await notify_status_changed(client["telegram_id"], order_number, body.status, car_info)
+            if body.status == "ready":
+                agreed = int(order.get("agreed_price") or 0)
+                paid = int(order.get("paid_amount") or 0)
+                remaining = max(0, agreed - paid)
+                from bot.utils.formatters import format_money
+                await notify_receipt_request(
+                    client["telegram_id"], order_number,
+                    car_info=car_info,
+                    agreed_price=format_money(agreed),
+                    paid_amount=format_money(paid),
+                    remaining=format_money(remaining),
+                )
 
     updated = await get_order_by_number(order_number)
     return dict(updated)

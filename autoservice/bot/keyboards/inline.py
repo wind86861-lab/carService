@@ -36,16 +36,17 @@ def get_order_card_keyboard(order_number: str, lang: str = "uz") -> InlineKeyboa
     )
 
 
-def get_confirmation_keyboard(order_number: str, lang: str = "uz") -> InlineKeyboardMarkup:
+def get_confirmation_keyboard(order_number: str, remaining: str = "0", lang: str = "uz") -> InlineKeyboardMarkup:
     """Return an inline keyboard with receipt confirmation / dispute buttons."""
-    yes = "✅ Ha, oldim" if lang == "uz" else "✅ Да, получил"
+    if remaining and remaining != "0":
+        yes = f"✅ Ha, {remaining} to'ladim" if lang == "uz" else f"✅ Да, оплатил {remaining}"
+    else:
+        yes = "✅ Ha, oldim" if lang == "uz" else "✅ Да, получил"
     no = "⚠️ Yo'q, muammo bor" if lang == "uz" else "⚠️ Нет, есть проблема"
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(text=yes, callback_data=f"confirm_receipt:{order_number}"),
-                InlineKeyboardButton(text=no, callback_data=f"dispute:{order_number}"),
-            ]
+            [InlineKeyboardButton(text=yes, callback_data=f"confirm_receipt:{order_number}")],
+            [InlineKeyboardButton(text=no, callback_data=f"dispute:{order_number}")],
         ]
     )
 
