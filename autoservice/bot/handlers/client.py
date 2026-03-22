@@ -5,6 +5,7 @@ from aiogram.types import Message, CallbackQuery, InputMediaPhoto
 from aiogram.types import FSInputFile
 from aiogram.fsm.context import FSMContext
 
+from bot.filters import RoleFilter
 from bot.i18n import t, lang_of, all_variants
 from bot.states import ClientDispute, ClientLinkOrder, ClientFeedback
 from bot.keyboards.reply import get_main_keyboard, get_cancel_keyboard
@@ -213,12 +214,7 @@ async def client_status_handler(message: Message, db_user: dict):
 # ------------------------------------------------------------------
 
 
-def _is_client_role(message: Message, **kwargs) -> bool:
-    db_user = kwargs.get("db_user")
-    return isinstance(db_user, dict) and db_user.get("role") == "client"
-
-
-@router.message(F.text.in_(all_variants("btn_my_orders")), _is_client_role)
+@router.message(F.text.in_(all_variants("btn_my_orders")), RoleFilter("client"))
 async def client_my_orders_handler(message: Message, db_user: dict):
     lang = lang_of(db_user)
     orders = await get_orders_by_client(db_user["id"])

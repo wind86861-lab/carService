@@ -31,6 +31,7 @@ from bot.keyboards.inline import (
 from bot.keyboards.reply import get_cancel_keyboard, get_main_keyboard
 from bot.states import MasterCloseOrder, MasterCreateOrder, MasterUpdateParts
 from bot.utils.formatters import format_datetime, format_money, format_order_status
+from bot.filters import RoleFilter
 from bot.utils.notifications import notify_client_receipt_request, notify_client_status_changed
 
 logger = logging.getLogger(__name__)
@@ -368,12 +369,7 @@ async def _build_order_list(master_id: int, page: int = 1):
     return active, page_items, total, total_pages, page
 
 
-def _is_master_or_admin(message: Message, **kwargs) -> bool:
-    db_user = kwargs.get("db_user")
-    return isinstance(db_user, dict) and db_user.get("role") in ("master", "admin")
-
-
-@router.message(F.text.in_(all_variants("btn_my_orders")), _is_master_or_admin)
+@router.message(F.text.in_(all_variants("btn_my_orders")), RoleFilter("master", "admin"))
 async def master_my_orders_handler(message: Message, db_user: dict):
     lang = lang_of(db_user)
     active, page_items, total, total_pages, page = await _build_order_list(db_user["id"])
