@@ -213,10 +213,12 @@ async def client_status_handler(message: Message, db_user: dict):
 # ------------------------------------------------------------------
 
 
-@router.message(F.text.in_(all_variants("btn_my_orders")))
+def _is_client_role(message: Message, db_user: dict) -> bool:
+    return isinstance(db_user, dict) and db_user.get("role") == "client"
+
+
+@router.message(F.text.in_(all_variants("btn_my_orders")), _is_client_role)
 async def client_my_orders_handler(message: Message, db_user: dict):
-    if not isinstance(db_user, dict) or db_user.get("role") != "client":
-        return
     lang = lang_of(db_user)
     orders = await get_orders_by_client(db_user["id"])
     if not orders:

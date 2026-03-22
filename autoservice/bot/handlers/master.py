@@ -368,10 +368,12 @@ async def _build_order_list(master_id: int, page: int = 1):
     return active, page_items, total, total_pages, page
 
 
-@router.message(F.text.in_(all_variants("btn_my_orders")))
+def _is_master_or_admin(message: Message, db_user: dict) -> bool:
+    return isinstance(db_user, dict) and db_user.get("role") in ("master", "admin")
+
+
+@router.message(F.text.in_(all_variants("btn_my_orders")), _is_master_or_admin)
 async def master_my_orders_handler(message: Message, db_user: dict):
-    if not isinstance(db_user, dict) or db_user.get("role") not in ("master", "admin"):
-        return
     lang = lang_of(db_user)
     active, page_items, total, total_pages, page = await _build_order_list(db_user["id"])
     if not active:
