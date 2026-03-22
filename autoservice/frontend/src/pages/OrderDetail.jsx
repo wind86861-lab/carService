@@ -5,6 +5,7 @@ import StatusBadge from '../components/StatusBadge'
 import CloseOrderModal from '../components/CloseOrderModal'
 import { closeOrder } from '../api/client'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
+import { formatWithSpaces, stripSpaces } from '../utils/formatNumber'
 
 const TRANSITIONS = { new: 'preparation', preparation: 'in_process', in_process: 'ready' }
 const NEXT_LABELS = { preparation: 'Mark as Preparation', in_process: 'Mark as In Process', ready: 'Mark as Ready' }
@@ -71,7 +72,7 @@ export default function OrderDetail() {
   }
 
   const handlePayment = async () => {
-    const amt = parseFloat(paymentAmount)
+    const amt = parseFloat(stripSpaces(paymentAmount))
     if (!amt || amt <= 0) { showToast('Enter a valid amount'); return }
     setPaymentLoading(true)
     try {
@@ -251,10 +252,10 @@ export default function OrderDetail() {
                 <p className="text-sm font-medium text-gray-700 mb-2">Record Payment</p>
                 <div className="flex gap-2">
                   <input
-                    type="number" min="1" placeholder="Amount (UZS)"
+                    type="text" inputMode="numeric" placeholder="Amount (UZS)"
                     className="input flex-1"
                     value={paymentAmount}
-                    onChange={e => setPaymentAmount(e.target.value)}
+                    onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
                   />
                   <button onClick={handlePayment} disabled={paymentLoading} className="btn-success whitespace-nowrap">
                     {paymentLoading ? '…' : 'Record'}

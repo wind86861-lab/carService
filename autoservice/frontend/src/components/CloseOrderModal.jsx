@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { X, AlertTriangle } from 'lucide-react'
+import { formatWithSpaces, stripSpaces } from '../utils/formatNumber'
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('ru-RU') + ' UZS'
@@ -10,7 +11,7 @@ export default function CloseOrderModal({ order, onClose, onConfirm, loading }) 
   const [error, setError] = useState('')
 
   const agreed = Number(order?.agreed_price || 0)
-  const parts = parseFloat(partsCost) || 0
+  const parts = parseFloat(stripSpaces(partsCost)) || 0
   const profit = agreed - parts
   const masterShare = profit * 0.4
   const serviceShare = profit * 0.6
@@ -38,12 +39,12 @@ export default function CloseOrderModal({ order, onClose, onConfirm, loading }) 
           <div>
             <label className="label">Parts Cost (UZS)</label>
             <input
-              type="number"
-              min="0"
+              type="text"
+              inputMode="numeric"
               className="input"
               placeholder="0"
               value={partsCost}
-              onChange={(e) => { setPartsCost(e.target.value); setError('') }}
+              onChange={(e) => { setPartsCost(formatWithSpaces(e.target.value)); setError('') }}
               autoFocus
             />
             {error && <p className="mt-1 text-sm text-red-600">{error}</p>}

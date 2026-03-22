@@ -5,6 +5,7 @@ import StatusBadge from '../../components/StatusBadge'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { getAdminOrderDetail, forceCloseOrder } from '../../api/admin'
 import { ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { formatWithSpaces, stripSpaces } from '../../utils/formatNumber'
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') + ' UZS' }
 function fmtDate(d) {
@@ -43,7 +44,7 @@ export default function AdminOrderDetail() {
   const handleForceClose = async () => {
     setCloseLoading(true)
     try {
-      await forceCloseOrder(orderNumber, parseFloat(partsCost) || 0)
+      await forceCloseOrder(orderNumber, parseFloat(stripSpaces(partsCost)) || 0)
       setShowForceClose(false)
       await reload()
       showToast('Buyurtma majburiy yopildi. Mijoz xabardor qilindi.')
@@ -184,10 +185,10 @@ export default function AdminOrderDetail() {
             <p className="text-sm text-gray-500 mb-4">Bu buyurtmani joriy holatidan qat'i nazar majburiy yopish.</p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <input
-                type="number" min="0" placeholder="Qismlar narxi (UZS)"
+                type="text" inputMode="numeric" placeholder="Qismlar narxi (UZS)"
                 className="input w-full sm:w-52"
                 value={partsCost}
-                onChange={e => setPartsCost(e.target.value)}
+                onChange={e => setPartsCost(formatWithSpaces(e.target.value))}
               />
               <button onClick={() => setShowForceClose(true)} className="btn-danger">Majburiy yopish</button>
             </div>

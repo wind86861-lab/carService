@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { createOrder, uploadPhotos, getCarHistory } from '../api/client'
 import PhotoUpload from '../components/PhotoUpload'
 import { ArrowLeft, Copy, Check, ExternalLink } from 'lucide-react'
+import { formatWithSpaces, stripSpaces } from '../utils/formatNumber'
 
 const CURRENT_YEAR = new Date().getFullYear()
 const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || 'your_bot'
@@ -35,7 +36,10 @@ export default function NewOrder() {
   const [historyLoading, setHistoryLoading] = useState(false)
 
   const set = (field) => (e) => {
-    const val = field === 'plate' ? e.target.value.toUpperCase() : e.target.value
+    let val = field === 'plate' ? e.target.value.toUpperCase() : e.target.value
+    if (field === 'agreed_price' || field === 'paid_amount') {
+      val = formatWithSpaces(val)
+    }
     setForm(f => ({ ...f, [field]: val }))
     setErrors(err => ({ ...err, [field]: '' }))
 
@@ -62,9 +66,9 @@ export default function NewOrder() {
     if (!/^\+998\d{9}$/.test(form.client_phone.trim())) e.client_phone = 'Format: +998XXXXXXXXX'
     if (form.problem.trim().length < 10) e.problem = 'Minimum 10 characters'
     if (form.work_desc.trim().length < 10) e.work_desc = 'Minimum 10 characters'
-    const price = parseFloat(form.agreed_price)
+    const price = parseFloat(stripSpaces(form.agreed_price))
     if (!form.agreed_price || isNaN(price) || price <= 0) e.agreed_price = 'Must be a positive number'
-    const paid = parseFloat(form.paid_amount)
+    const paid = parseFloat(stripSpaces(form.paid_amount))
     if (form.paid_amount === '' || isNaN(paid) || paid < 0) e.paid_amount = 'Cannot be negative'
     if (!isNaN(price) && !isNaN(paid) && paid > price) e.paid_amount = 'Cannot exceed agreed price'
     if (photos.length === 0) e.photos = 'At least one photo required'
@@ -81,8 +85,8 @@ export default function NewOrder() {
       const body = {
         ...form,
         year: parseInt(form.year),
-        agreed_price: parseFloat(form.agreed_price),
-        paid_amount: parseFloat(form.paid_amount),
+        agreed_price: parseFloat(stripSpaces(form.agreed_price)),
+        paid_amount: parseFloat(stripSpaces(form.paid_amount)),
       }
       const result = await createOrder(body)
       if (photos.length > 0) {
@@ -215,10 +219,10 @@ export default function NewOrder() {
           <h2 className="font-semibold text-gray-700">Financials</h2>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Agreed Price (UZS) *" error={errors.agreed_price}>
-              <input className="input" type="number" min="1" value={form.agreed_price} onChange={set('agreed_price')} placeholder="0" />
+              <input className="input" type="text" inputMode="numeric" value={form.agreed_price} onChange={set('agreed_price')} placeholder="0" />
             </Field>
             <Field label="Initial Payment (UZS) *" error={errors.paid_amount}>
-              <input className="input" type="number" min="0" value={form.paid_amount} onChange={set('paid_amount')} placeholder="0" />
+              <input className="input" type="text" inputMode="numeric" value={form.paid_amount} onChange={set('paid_amount')} placeholder="0" />
             </Field>
           </div>
         </div>
