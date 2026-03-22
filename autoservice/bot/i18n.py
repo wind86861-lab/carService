@@ -79,7 +79,7 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         # --- Feedback ---
         "feedback_request": (
-            "⭐ <b>Buyurtma {order_number}</b>\n\n"
+            "⭐ Buyurtma {order_number}\n\n"
             "Xizmatimizni qanday baholaysiz? 1 dan 10 gacha baho bering."
         ),
         "feedback_rated": "⭐ Siz xizmatni baholadingiz: {rating}/10",
@@ -363,7 +363,7 @@ STRINGS: dict[str, dict[str, str]] = {
         ),
         # --- Feedback ---
         "feedback_request": (
-            "⭐ <b>Заказ {order_number}</b>\n\n"
+            "⭐ Заказ {order_number}\n\n"
             "Как вы оцениваете наш сервис? Дайте оценку от 1 до 10."
         ),
         "feedback_rated": "⭐ Вы оценили сервис: {rating}/10",

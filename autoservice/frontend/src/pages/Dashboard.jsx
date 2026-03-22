@@ -32,26 +32,26 @@ export default function Dashboard() {
   const closed = orders.filter(o => o.status === 'closed')
 
   const cards = [
-    { label: 'Active Orders', value: active.length, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Ready for Pickup', value: ready.length, icon: Car, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Closed This Month', value: summary?.order_count ?? 0, icon: CheckCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Earned This Month', value: fmt(summary?.total_master_share), icon: DollarSign, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    { label: 'Faol buyurtmalar', value: active.length, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Tayyor', value: ready.length, icon: Car, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Shu oy yopilgan', value: summary?.order_count ?? 0, icon: CheckCircle, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Shu oy daromad', value: fmt(summary?.total_master_share), icon: DollarSign, color: 'text-yellow-600', bg: 'bg-yellow-50' },
   ]
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
-          <h1 className="text-sm sm:text-lg font-bold text-gray-900 whitespace-nowrap">AutoService<span className="hidden sm:inline"> Dashboard</span></h1>
+          <h1 className="text-sm sm:text-lg font-bold text-gray-900 whitespace-nowrap">AutoService<span className="hidden sm:inline"> Boshqaruv</span></h1>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <button onClick={() => navigate('/profile')} className="btn-secondary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <UserCircle size={16} /> <span className="hidden sm:inline">Profile</span>
+              <UserCircle size={16} /> <span className="hidden sm:inline">Profil</span>
             </button>
             <button onClick={() => navigate('/statistics')} className="btn-secondary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <BarChart2 size={16} /> <span className="hidden sm:inline">Statistics</span>
+              <BarChart2 size={16} /> <span className="hidden sm:inline">Statistika</span>
             </button>
             <button onClick={() => navigate('/new-order')} className="btn-primary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
-              <Plus size={16} /> <span className="hidden sm:inline">New Order</span>
+              <Plus size={16} /> <span className="hidden sm:inline">Yangi buyurtma</span>
             </button>
             <button onClick={() => { logout(); navigate('/login') }} className="btn-secondary text-red-600 px-2 sm:px-3 py-1.5 sm:py-2">
               <LogOut size={16} />
@@ -75,27 +75,27 @@ export default function Dashboard() {
 
         <div className="card p-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-800">All Orders</h2>
-            <span className="text-sm text-gray-500">{orders.length} total</span>
+            <h2 className="font-semibold text-gray-800">Barcha buyurtmalar</h2>
+            <span className="text-sm text-gray-500">{orders.length} ta</span>
           </div>
           {loading ? (
-            <div className="p-8 text-center text-gray-400">Loading…</div>
+            <div className="p-8 text-center text-gray-400">Yuklanmoqda…</div>
           ) : orders.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-500 mb-4">No orders yet.</p>
-              <button onClick={() => navigate('/new-order')} className="btn-primary">Create First Order</button>
+              <p className="text-gray-500 mb-4">Hali buyurtmalar yo'q.</p>
+              <button onClick={() => navigate('/new-order')} className="btn-primary">Birinchi buyurtmani yarating</button>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    <th className="px-6 py-3">Order #</th>
-                    <th className="px-6 py-3">Car</th>
-                    <th className="px-6 py-3">Client</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3">Price</th>
-                    <th className="px-6 py-3">Created</th>
+                    <th className="px-6 py-3">Buyurtma №</th>
+                    <th className="px-6 py-3">Mashina</th>
+                    <th className="px-6 py-3">Mijoz</th>
+                    <th className="px-6 py-3">Holat</th>
+                    <th className="px-6 py-3">Narx</th>
+                    <th className="px-6 py-3">Yaratilgan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">

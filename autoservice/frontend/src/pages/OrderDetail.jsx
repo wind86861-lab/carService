@@ -8,7 +8,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatWithSpaces, stripSpaces } from '../utils/formatNumber'
 
 const TRANSITIONS = { new: 'preparation', preparation: 'in_process', in_process: 'ready' }
-const NEXT_LABELS = { preparation: 'Mark as Preparation', in_process: 'Mark as In Process', ready: 'Mark as Ready' }
+const NEXT_LABELS = { preparation: 'Tayyorlashga o\'tkazish', in_process: 'Jarayonga o\'tkazish', ready: 'Tayyor deb belgilash' }
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') + ' UZS' }
 function fmtDate(d) {
@@ -53,9 +53,9 @@ export default function OrderDetail() {
     try {
       await updateOrderStatus(orderNumber, { status: next })
       await reload()
-      showToast(`Status updated to ${next}`)
+      showToast('Holat yangilandi')
     } catch (e) {
-      showToast(e.response?.data?.detail || 'Failed to update status')
+      showToast(e.response?.data?.detail || 'Holatni yangilab bo\'lmadi')
     } finally { setStatusLoading(false) }
   }
 
@@ -65,28 +65,28 @@ export default function OrderDetail() {
       await closeOrder(orderNumber, { parts_cost: partsCost })
       setCloseModal(false)
       await reload()
-      showToast('Order closed. Client notified.')
+      showToast('Buyurtma yopildi. Mijozga xabar yuborildi.')
     } catch (e) {
-      showToast(e.response?.data?.detail || 'Failed to close order')
+      showToast(e.response?.data?.detail || 'Buyurtmani yopib bo\'lmadi')
     } finally { setCloseLoading(false) }
   }
 
   const handlePayment = async () => {
     const amt = parseFloat(stripSpaces(paymentAmount))
-    if (!amt || amt <= 0) { showToast('Enter a valid amount'); return }
+    if (!amt || amt <= 0) { showToast('To\'g\'ri summa kiriting'); return }
     setPaymentLoading(true)
     try {
       await recordPayment(orderNumber, amt)
       setPaymentAmount('')
       await reload()
-      showToast('Payment recorded')
+      showToast('To\'lov qayd etildi')
     } catch (e) {
-      showToast(e.response?.data?.detail || 'Failed to record payment')
+      showToast(e.response?.data?.detail || 'To\'lovni qayd etib bo\'lmadi')
     } finally { setPaymentLoading(false) }
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Loading…</div>
-  if (!order) return <div className="min-h-screen flex items-center justify-center text-gray-400">Order not found</div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-400">Yuklanmoqda…</div>
+  if (!order) return <div className="min-h-screen flex items-center justify-center text-gray-400">Buyurtma topilmadi</div>
 
   const photos = order.photos || []
   const logs = order.logs || []
@@ -105,7 +105,7 @@ export default function OrderDetail() {
           <span className="font-mono font-bold text-blue-700 text-lg">{order.order_number}</span>
           <StatusBadge status={order.status} size="lg" />
           {order.client_confirmed && (
-            <span className="ml-auto text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">Client confirmed</span>
+            <span className="ml-auto text-xs text-green-700 bg-green-50 px-2 py-1 rounded-full">Mijoz tasdiqlagan</span>
           )}
         </div>
       </header>
@@ -139,52 +139,52 @@ export default function OrderDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">Car & Client</h2>
-            <InfoRow label="Car" value={`${order.brand || ''} ${order.model || ''}`.trim()} />
-            <InfoRow label="Plate" value={order.plate} />
-            <InfoRow label="Color" value={order.color} />
-            <InfoRow label="Year" value={order.year} />
+            <h2 className="font-semibold text-gray-700 mb-3">Mashina va Mijoz</h2>
+            <InfoRow label="Mashina" value={`${order.brand || ''} ${order.model || ''}`.trim()} />
+            <InfoRow label="Davlat raqami" value={order.plate} />
+            <InfoRow label="Rang" value={order.color} />
+            <InfoRow label="Yil" value={order.year} />
             {order.visit_count > 1 && (
               <div className="mt-2 text-xs text-yellow-700 bg-yellow-50 px-3 py-1.5 rounded-lg">
-                Visit #{order.visit_count} for this plate
+                Bu mashina {order.visit_count}-marta kelgan
               </div>
             )}
             <div className="mt-4 border-t border-gray-50 pt-4">
-              <InfoRow label="Client" value={order.client_name || order.client_full_name} />
-              <InfoRow label="Phone" value={order.client_phone || order.client_phone_num} />
+              <InfoRow label="Mijoz" value={order.client_name || order.client_full_name} />
+              <InfoRow label="Telefon" value={order.client_phone || order.client_phone_num} />
             </div>
           </div>
 
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">Financials</h2>
-            <InfoRow label="Agreed Price" value={fmt(order.agreed_price)} />
-            <InfoRow label="Paid" value={fmt(order.paid_amount)} />
-            <InfoRow label="Remaining" value={remaining > 0 ? fmt(remaining) : '✅ Fully paid'} />
+            <h2 className="font-semibold text-gray-700 mb-3">Moliyaviy</h2>
+            <InfoRow label="Kelishilgan narx" value={fmt(order.agreed_price)} />
+            <InfoRow label="To'langan" value={fmt(order.paid_amount)} />
+            <InfoRow label="Qoldiq" value={remaining > 0 ? fmt(remaining) : '✅ To\'liq to\'langan'} />
             {order.status === 'closed' && (
               <>
-                <InfoRow label="Parts Cost" value={fmt(order.parts_cost)} />
-                <InfoRow label="Profit" value={fmt(order.profit)} />
-                <InfoRow label="Your Share (40%)" value={fmt(order.master_share)} />
-                <InfoRow label="Service Share (60%)" value={fmt(order.service_share)} />
+                <InfoRow label="Ehtiyot qismlar" value={fmt(order.parts_cost)} />
+                <InfoRow label="Foyda" value={fmt(order.profit)} />
+                <InfoRow label="Usta ulushi (40%)" value={fmt(order.master_share)} />
+                <InfoRow label="Servis ulushi (60%)" value={fmt(order.service_share)} />
               </>
             )}
             <div className="mt-4 border-t border-gray-50 pt-4">
-              <InfoRow label="Created" value={fmtDate(order.created_at)} />
-              {order.ready_at && <InfoRow label="Ready at" value={fmtDate(order.ready_at)} />}
-              {order.closed_at && <InfoRow label="Closed at" value={fmtDate(order.closed_at)} />}
+              <InfoRow label="Yaratilgan" value={fmtDate(order.created_at)} />
+              {order.ready_at && <InfoRow label="Tayyor bo'lgan" value={fmtDate(order.ready_at)} />}
+              {order.closed_at && <InfoRow label="Yopilgan" value={fmtDate(order.closed_at)} />}
             </div>
           </div>
         </div>
 
         <div className="card">
-          <h2 className="font-semibold text-gray-700 mb-3">Problem & Work</h2>
+          <h2 className="font-semibold text-gray-700 mb-3">Muammo va Ish</h2>
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Problem</p>
+              <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Muammo</p>
               <p className="text-gray-800">{order.problem || '—'}</p>
             </div>
             <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Work Performed</p>
+              <p className="text-gray-500 text-xs uppercase tracking-wide mb-1">Bajarilgan ish</p>
               <p className="text-gray-800">{order.work_desc || '—'}</p>
             </div>
           </div>
@@ -192,14 +192,14 @@ export default function OrderDetail() {
 
         {(order.expenses || []).length > 0 && (
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">🔩 Parts & Expenses</h2>
+            <h2 className="font-semibold text-gray-700 mb-3">🔩 Ehtiyot qismlar va Xarajatlar</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase">
-                    <th className="text-left py-2 pr-3">Item</th>
-                    <th className="text-right py-2 pr-3">Amount</th>
-                    <th className="text-left py-2">Receipt</th>
+                    <th className="text-left py-2 pr-3">Nomi</th>
+                    <th className="text-right py-2 pr-3">Summa</th>
+                    <th className="text-left py-2">Chek</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -221,7 +221,7 @@ export default function OrderDetail() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200">
-                    <td className="py-2 font-semibold text-gray-700">Total</td>
+                    <td className="py-2 font-semibold text-gray-700">Jami</td>
                     <td className="py-2 text-right font-bold text-blue-800">{fmt((order.expenses || []).reduce((s, e) => s + e.amount, 0))}</td>
                     <td />
                   </tr>
@@ -233,7 +233,7 @@ export default function OrderDetail() {
 
         {order.status !== 'closed' && (
           <div className="card space-y-3">
-            <h2 className="font-semibold text-gray-700">Actions</h2>
+            <h2 className="font-semibold text-gray-700">Amallar</h2>
             <div className="flex flex-wrap gap-3">
               {nextStatus && nextStatus !== 'closed' && (
                 <button onClick={handleStatusUpdate} disabled={statusLoading} className="btn-primary">
@@ -242,23 +242,23 @@ export default function OrderDetail() {
               )}
               {order.status === 'ready' && (
                 <button onClick={() => setCloseModal(true)} className="btn-danger">
-                  Close Order
+                  Buyurtmani yopish
                 </button>
               )}
             </div>
 
             {order.status !== 'closed' && (
               <div className="border-t border-gray-50 pt-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">Record Payment</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">To'lov qayd etish</p>
                 <div className="flex gap-2">
                   <input
-                    type="text" inputMode="numeric" placeholder="Amount (UZS)"
+                    type="text" inputMode="numeric" placeholder="Summa (UZS)"
                     className="input flex-1"
                     value={paymentAmount}
                     onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
                   />
                   <button onClick={handlePayment} disabled={paymentLoading} className="btn-success whitespace-nowrap">
-                    {paymentLoading ? '…' : 'Record'}
+                    {paymentLoading ? '…' : 'Qayd etish'}
                   </button>
                 </div>
               </div>
@@ -268,7 +268,7 @@ export default function OrderDetail() {
 
         {logs.length > 0 && (
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-4">Order Log</h2>
+            <h2 className="font-semibold text-gray-700 mb-4">Buyurtma tarixi</h2>
             <div className="relative">
               <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-100" />
               <div className="space-y-4">

@@ -11,16 +11,16 @@ export default function PhotoUpload({ files, onChange }) {
 
   const validate = (file) => {
     if (!ALLOWED.includes(file.type) && !file.name.match(/\.(jpg|jpeg|png|heic|heif)$/i)) {
-      return 'Only JPG, PNG, HEIC files are allowed'
+      return 'Faqat JPG, PNG, HEIC formatdagi fayllar ruxsat etiladi'
     }
-    if (file.size > MAX_MB * 1024 * 1024) return `File too large (max ${MAX_MB} MB)`
+    if (file.size > MAX_MB * 1024 * 1024) return `Fayl juda katta (maksimum ${MAX_MB} MB)`
     return null
   }
 
   const addFiles = useCallback((newFiles) => {
     setError('')
     const remaining = MAX_FILES - files.length
-    if (remaining <= 0) { setError(`Maximum ${MAX_FILES} photos allowed`); return }
+    if (remaining <= 0) { setError(`Maksimum ${MAX_FILES} ta rasm ruxsat etiladi`); return }
     const toAdd = Array.from(newFiles).slice(0, remaining)
     const errors = toAdd.map(validate).filter(Boolean)
     if (errors.length) { setError(errors[0]); return }
@@ -40,18 +40,17 @@ export default function PhotoUpload({ files, onChange }) {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
-          dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-300'
-        } ${files.length >= MAX_FILES ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
+        className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-300'
+          } ${files.length >= MAX_FILES ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
         onClick={() => { if (files.length < MAX_FILES) document.getElementById('photo-input').click() }}
       >
         <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
         <p className="text-sm text-gray-600">
           {files.length >= MAX_FILES
-            ? 'Maximum photos reached'
-            : 'Drag & drop photos here, or click to select'}
+            ? 'Maksimum rasmlar yuklandi'
+            : 'Rasmlarni bu yerga tashlang yoki tanlash uchun bosing'}
         </p>
-        <p className="text-xs text-gray-400 mt-1">JPG, PNG, HEIC · max {MAX_MB} MB · up to {MAX_FILES} photos</p>
+        <p className="text-xs text-gray-400 mt-1">JPG, PNG, HEIC · maks {MAX_MB} MB · {MAX_FILES} ta rasmgacha</p>
         <input
           id="photo-input"
           type="file"

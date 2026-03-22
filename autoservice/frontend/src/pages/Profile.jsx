@@ -35,16 +35,16 @@ export default function Profile() {
     e.preventDefault()
     setPwdMsg('')
     setPwdErr('')
-    if (newPwd.length < 4) { setPwdErr('Password must be at least 4 characters'); return }
+    if (newPwd.length < 4) { setPwdErr('Parol kamida 4 ta belgidan iborat bo\'lishi kerak'); return }
     setPwdLoading(true)
     try {
       await changePassword({ current_password: currentPwd, new_password: newPwd })
-      setPwdMsg('Password changed successfully!')
+      setPwdMsg('Parol muvaffaqiyatli o\'zgartirildi!')
       setCurrentPwd('')
       setNewPwd('')
       setShowPwd(false)
     } catch (err) {
-      setPwdErr(err.response?.data?.detail || 'Failed to change password')
+      setPwdErr(err.response?.data?.detail || 'Parolni o\'zgartirib bo\'lmadi')
     } finally {
       setPwdLoading(false)
     }
@@ -53,7 +53,7 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400">Loading…</p>
+        <p className="text-gray-400">Yuklanmoqda…</p>
       </div>
     )
   }
@@ -61,18 +61,18 @@ export default function Profile() {
   if (!profile) return null
 
   const infoItems = [
-    { icon: User, label: 'Full Name', value: profile.full_name || '—' },
-    { icon: Shield, label: 'Role', value: profile.role.charAt(0).toUpperCase() + profile.role.slice(1) },
-    { icon: Phone, label: 'Phone', value: profile.phone || '—' },
-    { icon: Hash, label: 'Username', value: profile.username || '—' },
+    { icon: User, label: 'To\'liq ism', value: profile.full_name || '—' },
+    { icon: Shield, label: 'Rol', value: profile.role === 'master' ? 'Usta' : profile.role === 'admin' ? 'Admin' : 'Mijoz' },
+    { icon: Phone, label: 'Telefon', value: profile.phone || '—' },
+    { icon: Hash, label: 'Foydalanuvchi', value: profile.username || '—' },
     { icon: Hash, label: 'Telegram ID', value: profile.telegram_id || '—' },
   ]
 
   const statCards = [
-    { label: 'Total Orders', value: profile.total_orders, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Closed Orders', value: profile.closed_orders, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Total Revenue', value: fmt(profile.total_revenue), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Total Earnings', value: fmt(profile.total_earnings), icon: DollarSign, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+    { label: 'Jami buyurtmalar', value: profile.total_orders, icon: Briefcase, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Yopilgan buyurtmalar', value: profile.closed_orders, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Jami tushum', value: fmt(profile.total_revenue), icon: DollarSign, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Jami daromad', value: fmt(profile.total_earnings), icon: DollarSign, color: 'text-yellow-600', bg: 'bg-yellow-50' },
   ]
 
   return (
@@ -82,7 +82,7 @@ export default function Profile() {
           <button onClick={() => navigate('/dashboard')} className="btn-secondary">
             <ArrowLeft size={16} />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">My Profile</h1>
+          <h1 className="text-lg font-bold text-gray-900">Mening profilim</h1>
         </div>
       </header>
 
@@ -102,7 +102,7 @@ export default function Profile() {
 
         {/* Info */}
         <div className="card">
-          <h2 className="font-semibold text-gray-800 mb-4">Personal Information</h2>
+          <h2 className="font-semibold text-gray-800 mb-4">Shaxsiy ma'lumotlar</h2>
           <dl className="space-y-3">
             {infoItems.map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
@@ -117,10 +117,10 @@ export default function Profile() {
         {/* Change Password */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-800">Security</h2>
+            <h2 className="font-semibold text-gray-800">Xavfsizlik</h2>
             {!showPwd && (
               <button onClick={() => setShowPwd(true)} className="btn-secondary text-sm">
-                <Lock size={14} /> Change Password
+                <Lock size={14} /> Parolni o'zgartirish
               </button>
             )}
           </div>
@@ -132,7 +132,7 @@ export default function Profile() {
                   type={showCurrent ? 'text' : 'password'}
                   value={currentPwd}
                   onChange={(e) => setCurrentPwd(e.target.value)}
-                  placeholder="Current password"
+                  placeholder="Joriy parol"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
                   required
                 />
@@ -145,7 +145,7 @@ export default function Profile() {
                   type={showNew ? 'text' : 'password'}
                   value={newPwd}
                   onChange={(e) => setNewPwd(e.target.value)}
-                  placeholder="New password"
+                  placeholder="Yangi parol"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
                   required
                 />
@@ -159,10 +159,10 @@ export default function Profile() {
 
               <div className="flex gap-2">
                 <button type="submit" disabled={pwdLoading} className="btn-primary text-sm">
-                  {pwdLoading ? 'Saving…' : 'Save'}
+                  {pwdLoading ? 'Saqlanmoqda…' : 'Saqlash'}
                 </button>
                 <button type="button" onClick={() => { setShowPwd(false); setPwdErr(''); setPwdMsg('') }} className="btn-secondary text-sm">
-                  Cancel
+                  Bekor qilish
                 </button>
               </div>
             </form>

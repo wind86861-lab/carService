@@ -10,10 +10,10 @@ function fmtDate(d) {
 }
 
 const PERIODS = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This Week' },
-  { value: 'month', label: 'This Month' },
-  { value: 'custom', label: 'Custom Range' },
+  { value: 'today', label: 'Bugun' },
+  { value: 'week', label: 'Shu hafta' },
+  { value: 'month', label: 'Shu oy' },
+  { value: 'custom', label: 'Boshqa davr' },
 ]
 
 export default function Statistics() {
@@ -38,10 +38,10 @@ export default function Statistics() {
   useEffect(() => { if (period !== 'custom') load() }, [period])
 
   const summaryCards = summary ? [
-    { label: 'Orders Closed', value: summary.order_count, icon: Award, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Total Revenue', value: fmt(summary.total_price), icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Parts Cost', value: fmt(summary.total_parts), icon: Package, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { label: 'Your Share', value: fmt(summary.total_master_share), icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Yopilgan buyurtmalar', value: summary.order_count, icon: Award, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Jami tushum', value: fmt(summary.total_price), icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Ehtiyot qismlar', value: fmt(summary.total_parts), icon: Package, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Sizning ulush', value: fmt(summary.total_master_share), icon: DollarSign, color: 'text-green-600', bg: 'bg-green-50' },
   ] : []
 
   const totals = orders.reduce((acc, o) => ({
@@ -56,7 +56,7 @@ export default function Statistics() {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')} className="btn-secondary p-2"><ArrowLeft size={16} /></button>
-          <h1 className="text-lg font-bold">Statistics</h1>
+          <h1 className="text-lg font-bold">Statistika</h1>
         </div>
       </header>
 
@@ -78,14 +78,14 @@ export default function Statistics() {
                 <input type="date" className="input w-auto text-sm py-1.5" value={fromDate} onChange={e => setFromDate(e.target.value)} />
                 <span className="text-gray-400">—</span>
                 <input type="date" className="input w-auto text-sm py-1.5" value={toDate} onChange={e => setToDate(e.target.value)} />
-                <button onClick={load} className="btn-primary py-1.5">Apply</button>
+                <button onClick={load} className="btn-primary py-1.5">Qo'llash</button>
               </div>
             )}
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Loading…</div>
+          <div className="text-center py-12 text-gray-400">Yuklanmoqda…</div>
         ) : (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -103,19 +103,19 @@ export default function Statistics() {
             {orders.length > 0 ? (
               <div className="card p-0 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-50">
-                  <h2 className="font-semibold text-gray-700">Closed Orders Breakdown</h2>
+                  <h2 className="font-semibold text-gray-700">Yopilgan buyurtmalar tafsiloti</h2>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                        <th className="px-4 py-3">Order #</th>
-                        <th className="px-4 py-3">Car</th>
-                        <th className="px-4 py-3 text-right">Revenue</th>
-                        <th className="px-4 py-3 text-right">Parts</th>
-                        <th className="px-4 py-3 text-right">Profit</th>
-                        <th className="px-4 py-3 text-right">Your Share</th>
-                        <th className="px-4 py-3">Closed</th>
+                        <th className="px-4 py-3">Buyurtma №</th>
+                        <th className="px-4 py-3">Mashina</th>
+                        <th className="px-4 py-3 text-right">Tushum</th>
+                        <th className="px-4 py-3 text-right">Qismlar</th>
+                        <th className="px-4 py-3 text-right">Foyda</th>
+                        <th className="px-4 py-3 text-right">Sizning ulush</th>
+                        <th className="px-4 py-3">Yopilgan</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -131,7 +131,7 @@ export default function Statistics() {
                         </tr>
                       ))}
                       <tr className="bg-gray-50 font-semibold text-sm border-t-2 border-gray-200">
-                        <td className="px-4 py-3" colSpan={2}>Totals ({orders.length} orders)</td>
+                        <td className="px-4 py-3" colSpan={2}>Jami ({orders.length} ta buyurtma)</td>
                         <td className="px-4 py-3 text-right">{fmt(totals.agreed)}</td>
                         <td className="px-4 py-3 text-right text-orange-600">{fmt(totals.parts)}</td>
                         <td className={`px-4 py-3 text-right ${totals.profit < 0 ? 'text-red-600' : ''}`}>{fmt(totals.profit)}</td>
@@ -143,7 +143,7 @@ export default function Statistics() {
                 </div>
               </div>
             ) : (
-              <div className="card text-center py-12 text-gray-400">No closed orders in this period.</div>
+              <div className="card text-center py-12 text-gray-400">Bu davrda yopilgan buyurtmalar yo'q.</div>
             )}
           </>
         )}
