@@ -146,5 +146,11 @@ async def help_handler(message: Message, db_user: dict):
 @router.message()
 async def unknown_handler(message: Message, db_user: dict):
     """Catch-all for unrecognized text messages."""
+    from bot.i18n import all_variants
+    logger.warning(
+        "UNKNOWN msg from user %s (role=%s): text=%r | btn_my_orders variants=%r",
+        db_user.get("id"), db_user.get("role"),
+        message.text, all_variants("btn_my_orders"),
+    )
     lang = lang_of(db_user)
     await message.answer(t("unknown_message", lang))
