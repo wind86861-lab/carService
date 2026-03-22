@@ -1,5 +1,7 @@
 """Custom aiogram filters for role-based handler matching."""
 
+from typing import Union
+
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
 
@@ -7,8 +9,11 @@ from aiogram.types import Message
 class RoleFilter(BaseFilter):
     """Filter that checks the db_user role injected by AuthMiddleware."""
 
-    def __init__(self, *roles: str):
-        self.roles = set(roles)
+    def __init__(self, role: Union[str, list[str], set[str]]):
+        if isinstance(role, str):
+            self.roles = {role}
+        else:
+            self.roles = set(role)
 
     async def __call__(self, message: Message, db_user: dict = None) -> bool:
         if not isinstance(db_user, dict):

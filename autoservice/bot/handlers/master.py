@@ -369,7 +369,7 @@ async def _build_order_list(master_id: int, page: int = 1):
     return active, page_items, total, total_pages, page
 
 
-@router.message(F.text.in_(all_variants("btn_my_orders")), RoleFilter("master", "admin"))
+@router.message(F.text.in_(all_variants("btn_my_orders")), RoleFilter(["master", "admin"]))
 async def master_my_orders_handler(message: Message, db_user: dict):
     lang = lang_of(db_user)
     active, page_items, total, total_pages, page = await _build_order_list(db_user["id"])
