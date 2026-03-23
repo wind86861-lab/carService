@@ -33,8 +33,8 @@ export default function Login({ mode = 'master' }) {
         return
       }
       if (!isAdmin && userRole === 'admin') {
-        setError('Admin kirish: /admin/login')
-        setLoading(false)
+        login(res.data.access_token, userRole)
+        navigate('/admin', { replace: true })
         return
       }
       login(res.data.access_token, userRole)
