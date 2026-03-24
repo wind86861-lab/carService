@@ -112,10 +112,10 @@ async def admin_get_order(order_number: str, _admin=Depends(require_admin)):
 async def admin_masters_list(_admin=Depends(require_admin)):
     """Simple list of all masters for dropdowns."""
     from sqlalchemy import text
-    from bot.database.db import async_session
+    from bot.database.connection import async_session
     async with async_session() as session:
         result = await session.execute(
-            text("SELECT id, full_name, username, phone FROM users WHERE role = 'master' AND is_blocked = false ORDER BY full_name")
+            text("SELECT id, full_name, username, phone FROM users WHERE role = 'master' AND is_active = true ORDER BY full_name")
         )
         return [dict(r) for r in result.mappings().all()]
 
@@ -307,7 +307,7 @@ async def admin_get_master(
 async def admin_set_master_share(master_id: int, body: dict, _admin=Depends(require_admin)):
     """Set custom master share percentage (or reset to default)."""
     from sqlalchemy import text as sa_text
-    from bot.database.db import async_session
+    from bot.database.connection import async_session
 
     pct = body.get("master_share_percent")
     if pct is not None:
