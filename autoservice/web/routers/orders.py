@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 
 from bot.database.models import (
     add_payment,
@@ -88,7 +88,10 @@ async def get_order(order_number: str, master=Depends(require_master)):
         raise HTTPException(status_code=404, detail="Order not found")
     order = dict(detail)
     logs = await get_order_logs(order["id"])
-    order["logs"] = [dict(l) for l in logs]
+    order["logs"] = [
+        {**dict(l), "receipt_url": get_photo_url(l["receipt_file_id"]) if l.get("receipt_file_id") else None}
+        for l in logs
+    ]
     photos = await get_photos_by_order(order["id"])
     order["photos"] = [
         {"id": p["id"], "file_id": p["file_id"], "url": get_photo_url(p["file_id"]), "uploaded_at": p["uploaded_at"]}
@@ -271,7 +274,9 @@ async def add_expense(
 @router.post("/orders/{order_number}/payment")
 async def record_payment(
     order_number: str,
-    body: PaymentSchema,
+    description: str = Form(...),
+    amount: float = Form(...),
+    receipt: UploadFile = File(...),
     master=Depends(require_master),
 ):
     order = await get_order_by_number(order_number)
@@ -279,8 +284,15 @@ async def record_payment(
         raise HTTPException(status_code=404, detail="Order not found")
     if order["status"] == "closed" and order["client_confirmed"]:
         raise HTTPException(status_code=400, detail="Cannot add payment to a fully closed order")
+    if not description.strip():
+        raise HTTPException(status_code=400, detail="To'lov nomi majburiy")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Summani kiriting")
 
-    await add_payment(order_number, body.amount, changed_by=master["id"], description=body.description)
+    validate_image(receipt)
+    receipt_filename = await save_upload_file(receipt)
+
+    await add_payment(order_number, amount, changed_by=master["id"], description=description.strip(), receipt_file_id=receipt_filename)
     updated = await get_order_by_number(order_number)
     remaining = Decimal(str(updated["agreed_price"])) - Decimal(str(updated["paid_amount"]))
     return {"paid_amount": float(updated["paid_amount"]), "remaining": float(remaining)}

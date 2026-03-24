@@ -35,6 +35,7 @@ export default function AdminOrderDetail() {
   const [receiptUrl, setReceiptUrl] = useState(null)
   const [paymentDesc, setPaymentDesc] = useState('')
   const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentReceipt, setPaymentReceipt] = useState(null)
   const [paymentLoading, setPaymentLoading] = useState(false)
 
   const reload = () => {
@@ -182,49 +183,63 @@ export default function AdminOrderDetail() {
         {order.status !== 'closed' && (
           <div className="card">
             <h2 className="font-semibold text-gray-700 mb-3">To'lov qayd etish</h2>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
-              <div className="flex-1">
-                <label className="block text-xs text-gray-500 mb-1">To'lov nomi *</label>
-                <input
-                  type="text"
-                  placeholder="masalan, Oldindan to'lov"
-                  className="input w-full"
-                  value={paymentDesc}
-                  onChange={e => setPaymentDesc(e.target.value)}
-                />
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">To'lov nomi *</label>
+                  <input
+                    type="text"
+                    placeholder="masalan, Oldindan to'lov"
+                    className="input w-full"
+                    value={paymentDesc}
+                    onChange={e => setPaymentDesc(e.target.value)}
+                  />
+                </div>
+                <div className="sm:w-48">
+                  <label className="block text-xs text-gray-500 mb-1">Summa (UZS) *</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    className="input w-full"
+                    value={paymentAmount}
+                    onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
+                  />
+                </div>
               </div>
-              <div className="sm:w-48">
-                <label className="block text-xs text-gray-500 mb-1">Summa (UZS) *</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  className="input w-full"
-                  value={paymentAmount}
-                  onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 hover:border-purple-400 transition-colors flex-1">
+                  <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <span>{paymentReceipt ? paymentReceipt.name : 'Chek rasmi *'}</span>
+                  <input
+                    type="file" accept="image/*" className="hidden"
+                    onChange={e => setPaymentReceipt(e.target.files[0] || null)}
+                  />
+                </label>
+                <button
+                  onClick={async () => {
+                    if (!paymentDesc.trim()) { showToast('To\'lov nomini kiriting'); return }
+                    const amt = parseFloat(stripSpaces(paymentAmount))
+                    if (!amt || amt <= 0) { showToast('To\'g\'ri summa kiriting'); return }
+                    if (!paymentReceipt) { showToast('Chek rasmini yuklang'); return }
+                    setPaymentLoading(true)
+                    try {
+                      await adminRecordPayment(orderNumber, paymentDesc.trim(), amt, paymentReceipt)
+                      setPaymentDesc('')
+                      setPaymentAmount('')
+                      setPaymentReceipt(null)
+                      await reload()
+                      showToast('To\'lov qayd etildi')
+                    } catch (e) {
+                      showToast(e.response?.data?.detail || 'To\'lovni qayd etib bo\'lmadi')
+                    } finally { setPaymentLoading(false) }
+                  }}
+                  disabled={paymentLoading}
+                  className="btn-success whitespace-nowrap"
+                >
+                  {paymentLoading ? '…' : 'Qayd etish'}
+                </button>
               </div>
-              <button
-                onClick={async () => {
-                  if (!paymentDesc.trim()) { showToast('To\'lov nomini kiriting'); return }
-                  const amt = parseFloat(stripSpaces(paymentAmount))
-                  if (!amt || amt <= 0) { showToast('To\'g\'ri summa kiriting'); return }
-                  setPaymentLoading(true)
-                  try {
-                    await adminRecordPayment(orderNumber, paymentDesc.trim(), amt)
-                    setPaymentDesc('')
-                    setPaymentAmount('')
-                    await reload()
-                    showToast('To\'lov qayd etildi')
-                  } catch (e) {
-                    showToast(e.response?.data?.detail || 'To\'lovni qayd etib bo\'lmadi')
-                  } finally { setPaymentLoading(false) }
-                }}
-                disabled={paymentLoading}
-                className="btn-success whitespace-nowrap"
-              >
-                {paymentLoading ? '…' : 'Qayd etish'}
-              </button>
             </div>
           </div>
         )}
@@ -261,6 +276,11 @@ export default function AdminOrderDetail() {
                       <div>
                         {log.status && <StatusBadge status={log.status} />}
                         {log.note && <p className="text-sm text-gray-600 mt-0.5">{log.note}</p>}
+                        {log.receipt_url && (
+                          <button onClick={() => setReceiptUrl(log.receipt_url)} className="inline-block mt-1 cursor-pointer">
+                            <img src={log.receipt_url} alt="chek" className="h-12 w-16 object-cover rounded border border-gray-200 hover:opacity-80" />
+                          </button>
+                        )}
                         {log.changed_by_name && <p className="text-xs text-gray-400">by {log.changed_by_name}</p>}
                       </div>
                       <span className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(log.changed_at)}</span>

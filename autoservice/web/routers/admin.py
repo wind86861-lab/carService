@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from bot.database.models import (
@@ -84,7 +84,10 @@ async def admin_get_order(order_number: str, _admin=Depends(require_admin)):
     order = dict(detail)
     from web.utils.photos import get_photo_url
     logs = await get_order_logs(order["id"])
-    order["logs"] = [dict(l) for l in logs]
+    order["logs"] = [
+        {**dict(l), "receipt_url": get_photo_url(l["receipt_file_id"]) if l.get("receipt_file_id") else None}
+        for l in logs
+    ]
     photos = await get_photos_by_order(order["id"])
     order["photos"] = [
         {"id": p["id"], "file_id": p["file_id"], "url": get_photo_url(p["file_id"]), "uploaded_at": p["uploaded_at"]}
@@ -124,22 +127,25 @@ async def admin_force_close(
 @router.post("/orders/{order_number}/payment")
 async def admin_record_payment(
     order_number: str,
-    body: dict,
+    description: str = Form(...),
+    amount: float = Form(...),
+    receipt: UploadFile = File(...),
     admin=Depends(require_admin),
 ):
+    from web.utils.photos import save_upload_file, validate_image
+
     order = await get_order_by_number(order_number)
     if not order:
         raise HTTPException(status_code=404, detail="Buyurtma topilmadi")
-
-    description = (body.get("description") or "").strip()
-    if not description:
+    if not description.strip():
         raise HTTPException(status_code=400, detail="To'lov nomi majburiy")
-
-    amount = body.get("amount")
-    if not amount or float(amount) <= 0:
+    if amount <= 0:
         raise HTTPException(status_code=400, detail="Summani kiriting")
 
-    await add_payment(order_number, float(amount), changed_by=admin["id"], description=description)
+    validate_image(receipt)
+    receipt_filename = await save_upload_file(receipt)
+
+    await add_payment(order_number, amount, changed_by=admin["id"], description=description.strip(), receipt_file_id=receipt_filename)
     updated = await get_order_by_number(order_number)
     return {"paid_amount": float(updated["paid_amount"])}
 

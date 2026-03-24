@@ -127,6 +127,7 @@ RUN_MIGRATIONS_SQL = [
     """),
     text("CREATE INDEX IF NOT EXISTS idx_expenses_order_id ON order_expenses(order_id);"),
     text("ALTER TABLE users ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'uz';"),
+    text("ALTER TABLE order_logs ADD COLUMN IF NOT EXISTS receipt_file_id TEXT;"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -677,7 +678,7 @@ async def get_order_logs(order_id: int):
 # ---------------------------------------------------------------------------
 
 
-async def add_payment(order_number: str, amount, changed_by: int | None = None, description: str | None = None):
+async def add_payment(order_number: str, amount, changed_by: int | None = None, description: str | None = None, receipt_file_id: str | None = None):
     """Add to paid_amount and write a log entry."""
     async with async_session() as session:
         async with session.begin():
@@ -693,13 +694,14 @@ async def add_payment(order_number: str, amount, changed_by: int | None = None, 
                 desc = f" — {description}" if description else ""
                 await session.execute(
                     text(
-                        "INSERT INTO order_logs (order_id, status, note, changed_by) "
-                        "VALUES (:oid, NULL, :note, :by)"
+                        "INSERT INTO order_logs (order_id, status, note, changed_by, receipt_file_id) "
+                        "VALUES (:oid, NULL, :note, :by, :receipt)"
                     ),
                     {
                         "oid": row[0],
                         "note": f"To'lov: {amount} UZS{desc}. Jami to'langan: {row[1]}",
                         "by": changed_by,
+                        "receipt": receipt_file_id,
                     },
                 )
 
