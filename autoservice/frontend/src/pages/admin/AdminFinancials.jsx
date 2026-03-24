@@ -64,8 +64,8 @@ export default function AdminFinancials() {
     { label: 'Daromad', value: fmt(summary.total_revenue), color: 'text-blue-700' },
     { label: 'Qismlar narxi', value: fmt(summary.total_parts_cost), color: 'text-orange-600' },
     { label: 'Foyda', value: fmt(summary.total_profit), color: Number(summary.total_profit) < 0 ? 'text-red-600' : 'text-gray-900' },
-    { label: 'Servis ulushi (60%)', value: fmt(summary.total_service_share), color: 'text-purple-700' },
-    { label: 'Ustalar ulushi (40%)', value: fmt(summary.total_master_share), color: 'text-green-700' },
+    { label: 'Servis ulushi', value: fmt(summary.total_service_share), color: 'text-purple-700' },
+    { label: 'Ustalar ulushi', value: fmt(summary.total_master_share), color: 'text-green-700' },
   ]
 
   return (

@@ -982,16 +982,35 @@ async def force_close_order(order_number: str, parts_cost: float, admin_id: int)
     async with async_session() as session:
         async with session.begin():
             row = await session.execute(
-                text("SELECT id, agreed_price, paid_amount FROM orders WHERE order_number = :num"),
+                text("SELECT o.id, o.agreed_price, o.paid_amount, o.master_id, "
+                     "u.master_share_percent "
+                     "FROM orders o LEFT JOIN users u ON u.id = o.master_id "
+                     "WHERE o.order_number = :num"),
                 {"num": order_number},
             )
             order = row.first()
             if not order:
                 return None
-            order_id, agreed_price, paid_amount = order
+            order_id, agreed_price, paid_amount, master_id, custom_pct = order
             profit = float(agreed_price) - parts_cost
-            master_share = round(profit * 0.4, 2)
-            service_share = round(profit * 0.6, 2)
+            if custom_pct is not None:
+                ratio = custom_pct / 100.0
+            else:
+                total_earned = 0
+                if master_id:
+                    te = await session.execute(
+                        text("SELECT COALESCE(SUM(master_share),0) FROM orders WHERE master_id=:mid AND status='closed'"),
+                        {"mid": master_id},
+                    )
+                    total_earned = int(te.scalar() or 0)
+                if total_earned >= 15_000_000:
+                    ratio = 0.50
+                elif total_earned >= 10_000_000:
+                    ratio = 0.45
+                else:
+                    ratio = 0.40
+            master_share = round(profit * ratio, 2)
+            service_share = round(profit * (1 - ratio), 2)
             result = await session.execute(
                 text(
                     "UPDATE orders SET status='closed', parts_cost=:pc, profit=:pr, "
