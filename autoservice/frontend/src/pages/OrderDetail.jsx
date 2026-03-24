@@ -7,8 +7,27 @@ import { closeOrder } from '../api/client'
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatWithSpaces, stripSpaces } from '../utils/formatNumber'
 
-const TRANSITIONS = { new: 'preparation', preparation: 'in_process', in_process: 'ready' }
-const NEXT_LABELS = { preparation: 'Tayyorlashga o\'tkazish', in_process: 'Jarayonga o\'tkazish', ready: 'Tayyor deb belgilash' }
+const ALL_STATUSES = [
+  { value: 'new', label: 'Yangi' },
+  { value: 'preparation', label: 'Tayyorlash' },
+  { value: 'in_process', label: 'Jarayonda' },
+  { value: 'ready', label: 'Tayyor' },
+]
+
+const STATUS_LABELS = { new: 'Yangi', preparation: 'Tayyorlash', in_process: 'Jarayonda', ready: 'Tayyor', closed: 'Yopilgan' }
+
+function translateNote(note) {
+  if (!note) return note
+  return note
+    .replace('Order created', 'Buyurtma yaratildi')
+    .replace('Master changed status to preparation', 'Usta holatni Tayyorlashga o\'zgartirdi')
+    .replace('Master changed status to in_process', 'Usta holatni Jarayonga o\'zgartirdi')
+    .replace('Master changed status to ready', 'Usta holatni Tayyorga o\'zgartirdi')
+    .replace('Master changed status to new', 'Usta holatni Yangiga o\'zgartirdi')
+    .replace('Master changed status to closed', 'Usta buyurtmani yopdi')
+    .replace(/Master changed status to (\w+)/g, 'Usta holatni $1 ga o\'zgartirdi')
+    .replace(/Status changed to (\w+)/g, 'Holat $1 ga o\'zgartildi')
+}
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') + ' UZS' }
 function fmtDate(d) {
@@ -37,6 +56,7 @@ export default function OrderDetail() {
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [toast, setToast] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState('')
 
   const reload = () => {
     getOrderDetail(orderNumber).then(setOrder).catch(console.error).finally(() => setLoading(false))
@@ -46,12 +66,12 @@ export default function OrderDetail() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
-  const handleStatusUpdate = async () => {
-    const next = TRANSITIONS[order.status]
-    if (!next) return
+  const handleStatusUpdate = async (newStatus) => {
+    if (!newStatus || newStatus === order.status) return
     setStatusLoading(true)
     try {
-      await updateOrderStatus(orderNumber, { status: next })
+      await updateOrderStatus(orderNumber, { status: newStatus })
+      setSelectedStatus('')
       await reload()
       showToast('Holat yangilandi')
     } catch (e) {
@@ -90,7 +110,7 @@ export default function OrderDetail() {
 
   const photos = order.photos || []
   const logs = order.logs || []
-  const nextStatus = TRANSITIONS[order.status]
+  const availableStatuses = ALL_STATUSES.filter(s => s.value !== order.status)
   const remaining = Number(order.agreed_price) - Number(order.paid_amount)
 
   return (
@@ -234,12 +254,24 @@ export default function OrderDetail() {
         {order.status !== 'closed' && (
           <div className="card space-y-3">
             <h2 className="font-semibold text-gray-700">Amallar</h2>
-            <div className="flex flex-wrap gap-3">
-              {nextStatus && nextStatus !== 'closed' && (
-                <button onClick={handleStatusUpdate} disabled={statusLoading} className="btn-primary">
-                  {statusLoading ? 'Updating…' : NEXT_LABELS[nextStatus]}
-                </button>
-              )}
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value={selectedStatus}
+                onChange={e => setSelectedStatus(e.target.value)}
+                className="input w-auto min-w-[180px]"
+              >
+                <option value="">Holatni tanlang...</option>
+                {availableStatuses.map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => handleStatusUpdate(selectedStatus)}
+                disabled={statusLoading || !selectedStatus}
+                className="btn-primary"
+              >
+                {statusLoading ? 'Yangilanmoqda…' : 'O\'zgartirish'}
+              </button>
               {order.status === 'ready' && (
                 <button onClick={() => setCloseModal(true)} className="btn-danger">
                   Buyurtmani yopish
@@ -278,7 +310,7 @@ export default function OrderDetail() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         {log.status && <span className="text-sm font-medium"><StatusBadge status={log.status} /></span>}
-                        {log.note && <p className="text-sm text-gray-600 mt-0.5">{log.note}</p>}
+                        {log.note && <p className="text-sm text-gray-600 mt-0.5">{translateNote(log.note)}</p>}
                         {log.changed_by_name && <p className="text-xs text-gray-400 mt-0.5">by {log.changed_by_name}</p>}
                       </div>
                       <span className="text-xs text-gray-400 whitespace-nowrap">{fmtDate(log.changed_at)}</span>

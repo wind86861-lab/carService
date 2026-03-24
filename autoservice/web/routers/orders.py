@@ -41,6 +41,8 @@ ALLOWED_TRANSITIONS = {
     "ready": "closed",
 }
 
+VALID_STATUSES = {"new", "preparation", "in_process", "ready"}
+
 
 @router.post("/orders", status_code=status.HTTP_201_CREATED)
 async def create_new_order(body: OrderCreateSchema, master=Depends(require_master)):
@@ -114,11 +116,15 @@ async def update_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    allowed_next = ALLOWED_TRANSITIONS.get(order["status"])
-    if body.status != allowed_next:
+    if body.status not in VALID_STATUSES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid status transition: {order['status']} → {body.status}. Expected: {allowed_next}",
+            detail=f"Noto'g'ri holat: {body.status}",
+        )
+    if body.status == order["status"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Buyurtma allaqachon shu holatda",
         )
 
     await update_order_status(
