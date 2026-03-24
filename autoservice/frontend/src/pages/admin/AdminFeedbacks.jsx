@@ -9,12 +9,25 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-const CATEGORY_COLORS = {
-  Communication: 'bg-blue-100 text-blue-700',
-  Time: 'bg-yellow-100 text-yellow-700',
-  Quality: 'bg-green-100 text-green-700',
-  Price: 'bg-red-100 text-red-700',
-  Uncategorized: 'bg-gray-100 text-gray-700',
+const CATEGORY_MAP = {
+  pos_communication: { label: 'Yaxshi muloqot', emoji: '👍', color: 'bg-green-100 text-green-700' },
+  neg_communication: { label: 'Yomon muloqot', emoji: '👎', color: 'bg-red-100 text-red-700' },
+  pos_quality: { label: 'Sifatli ish', emoji: '✅', color: 'bg-green-100 text-green-700' },
+  neg_quality: { label: 'Sifatsiz ish', emoji: '❌', color: 'bg-red-100 text-red-700' },
+  pos_time: { label: 'O\'z vaqtida', emoji: '⏱️', color: 'bg-green-100 text-green-700' },
+  neg_time: { label: 'Kechikish', emoji: '⏳', color: 'bg-yellow-100 text-yellow-700' },
+  pos_price: { label: 'Narx mos', emoji: '💰', color: 'bg-green-100 text-green-700' },
+  neg_price: { label: 'Narx qimmat', emoji: '💸', color: 'bg-red-100 text-red-700' },
+  price: { label: 'Narx', emoji: '💲', color: 'bg-orange-100 text-orange-700' },
+  Communication: { label: 'Muloqot', emoji: '💬', color: 'bg-blue-100 text-blue-700' },
+  Time: { label: 'Vaqt', emoji: '⏱️', color: 'bg-yellow-100 text-yellow-700' },
+  Quality: { label: 'Sifat', emoji: '⭐', color: 'bg-green-100 text-green-700' },
+  Price: { label: 'Narx', emoji: '💲', color: 'bg-orange-100 text-orange-700' },
+  Uncategorized: { label: 'Boshqa', emoji: '📋', color: 'bg-gray-100 text-gray-700' },
+}
+
+function catInfo(key) {
+  return CATEGORY_MAP[key] || { label: key, emoji: '📋', color: 'bg-gray-100 text-gray-700' }
 }
 
 export default function AdminFeedbacks() {
@@ -85,14 +98,17 @@ export default function AdminFeedbacks() {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {(stats.categories || []).map(c => (
-                <div key={c.category} className="card text-center">
-                  <p className="text-2xl font-bold">{c.count}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${CATEGORY_COLORS[c.category] || CATEGORY_COLORS.Uncategorized}`}>
-                    {c.category}
-                  </span>
-                </div>
-              ))}
+              {(stats.categories || []).map(c => {
+                const ci = catInfo(c.category)
+                return (
+                  <div key={c.category} className="card text-center">
+                    <p className="text-2xl font-bold">{c.count}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${ci.color}`}>
+                      {ci.emoji} {ci.label}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
 
             {stats.masters?.length > 0 && (
@@ -134,7 +150,7 @@ export default function AdminFeedbacks() {
           </select>
           <select className="input w-40" value={filters.rating_max} onChange={e => setFilter('rating_max', e.target.value)}>
             <option value="">Barcha baholar</option>
-            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>≤ {n} stars</option>)}
+            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>≤ {n} yulduz</option>)}
           </select>
           <input type="date" className="input w-auto text-sm" value={filters.date_from} onChange={e => setFilter('date_from', e.target.value)} />
           <input type="date" className="input w-auto text-sm" value={filters.date_to} onChange={e => setFilter('date_to', e.target.value)} />
@@ -170,11 +186,14 @@ export default function AdminFeedbacks() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          {f.category && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[f.category] || CATEGORY_COLORS.Uncategorized}`}>
-                              {f.category}
-                            </span>
-                          )}
+                          {f.category && (() => {
+                            const ci = catInfo(f.category)
+                            return (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${ci.color}`}>
+                                {ci.emoji} {ci.label}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{f.comment || '—'}</td>
                         <td className="px-4 py-3">{f.client_name || '—'}</td>
