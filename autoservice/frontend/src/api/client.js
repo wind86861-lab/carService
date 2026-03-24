@@ -40,8 +40,8 @@ export const uploadPhotos = (orderNumber, files) => {
 }
 export const getOrderPhotos = (orderNumber) =>
   api.get(`/orders/${orderNumber}/photos`).then((r) => r.data)
-export const recordPayment = (orderNumber, amount) =>
-  api.post(`/orders/${orderNumber}/payment`, { amount }).then((r) => r.data)
+export const recordPayment = (orderNumber, description, amount) =>
+  api.post(`/orders/${orderNumber}/payment`, { description, amount }).then((r) => r.data)
 
 export const getCarHistory = (plate) =>
   api.get(`/cars/plate/${encodeURIComponent(plate)}`).then((r) => r.data)

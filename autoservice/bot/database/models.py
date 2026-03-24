@@ -677,7 +677,7 @@ async def get_order_logs(order_id: int):
 # ---------------------------------------------------------------------------
 
 
-async def add_payment(order_number: str, amount, changed_by: int | None = None):
+async def add_payment(order_number: str, amount, changed_by: int | None = None, description: str | None = None):
     """Add to paid_amount and write a log entry."""
     async with async_session() as session:
         async with session.begin():
@@ -690,6 +690,7 @@ async def add_payment(order_number: str, amount, changed_by: int | None = None):
             )
             row = result.first()
             if row:
+                desc = f" — {description}" if description else ""
                 await session.execute(
                     text(
                         "INSERT INTO order_logs (order_id, status, note, changed_by) "
@@ -697,7 +698,7 @@ async def add_payment(order_number: str, amount, changed_by: int | None = None):
                     ),
                     {
                         "oid": row[0],
-                        "note": f"Payment recorded: {amount}. Total paid: {row[1]}",
+                        "note": f"To'lov: {amount} UZS{desc}. Jami to'langan: {row[1]}",
                         "by": changed_by,
                     },
                 )

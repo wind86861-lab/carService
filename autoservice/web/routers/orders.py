@@ -280,7 +280,7 @@ async def record_payment(
     if order["status"] == "closed" and order["client_confirmed"]:
         raise HTTPException(status_code=400, detail="Cannot add payment to a fully closed order")
 
-    await add_payment(order_number, body.amount, changed_by=master["id"])
+    await add_payment(order_number, body.amount, changed_by=master["id"], description=body.description)
     updated = await get_order_by_number(order_number)
     remaining = Decimal(str(updated["agreed_price"])) - Decimal(str(updated["paid_amount"]))
     return {"paid_amount": float(updated["paid_amount"]), "remaining": float(remaining)}

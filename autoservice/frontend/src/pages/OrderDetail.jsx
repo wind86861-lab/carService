@@ -53,6 +53,7 @@ export default function OrderDetail() {
   const [closeModal, setCloseModal] = useState(false)
   const [closeLoading, setCloseLoading] = useState(false)
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [paymentDesc, setPaymentDesc] = useState('')
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [toast, setToast] = useState('')
@@ -92,11 +93,13 @@ export default function OrderDetail() {
   }
 
   const handlePayment = async () => {
+    if (!paymentDesc.trim()) { showToast('To\'lov nomini kiriting'); return }
     const amt = parseFloat(stripSpaces(paymentAmount))
     if (!amt || amt <= 0) { showToast('To\'g\'ri summa kiriting'); return }
     setPaymentLoading(true)
     try {
-      await recordPayment(orderNumber, amt)
+      await recordPayment(orderNumber, paymentDesc.trim(), amt)
+      setPaymentDesc('')
       setPaymentAmount('')
       await reload()
       showToast('To\'lov qayd etildi')
@@ -282,10 +285,16 @@ export default function OrderDetail() {
             {order.status !== 'closed' && (
               <div className="border-t border-gray-50 pt-3">
                 <p className="text-sm font-medium text-gray-700 mb-2">To'lov qayd etish</p>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
-                    type="text" inputMode="numeric" placeholder="Summa (UZS)"
+                    type="text" placeholder="To'lov nomi *"
                     className="input flex-1"
+                    value={paymentDesc}
+                    onChange={e => setPaymentDesc(e.target.value)}
+                  />
+                  <input
+                    type="text" inputMode="numeric" placeholder="Summa (UZS) *"
+                    className="input sm:w-40"
                     value={paymentAmount}
                     onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
                   />

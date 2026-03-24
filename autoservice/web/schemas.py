@@ -101,6 +101,7 @@ class OrderCloseSchema(BaseModel):
 
 class PaymentSchema(BaseModel):
     amount: Decimal
+    description: str
 
     @field_validator("amount")
     @classmethod
@@ -108,6 +109,13 @@ class PaymentSchema(BaseModel):
         if v <= 0:
             raise ValueError("Payment amount must be positive")
         return v
+
+    @field_validator("description")
+    @classmethod
+    def description_required(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Payment description is required")
+        return v.strip()
 
 
 class PhotoResponse(BaseModel):

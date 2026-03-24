@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import StatusBadge from '../../components/StatusBadge'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import { getAdminOrderDetail, forceCloseOrder } from '../../api/admin'
+import { getAdminOrderDetail, forceCloseOrder, adminRecordPayment } from '../../api/admin'
 import { ArrowLeft, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatWithSpaces, stripSpaces } from '../../utils/formatNumber'
 
@@ -33,6 +33,9 @@ export default function AdminOrderDetail() {
   const [toast, setToast] = useState('')
   const [photoIdx, setPhotoIdx] = useState(0)
   const [receiptUrl, setReceiptUrl] = useState(null)
+  const [paymentDesc, setPaymentDesc] = useState('')
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [paymentLoading, setPaymentLoading] = useState(false)
 
   const reload = () => {
     getAdminOrderDetail(orderNumber).then(setOrder).catch(console.error).finally(() => setLoading(false))
@@ -172,6 +175,56 @@ export default function AdminOrderDetail() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          </div>
+        )}
+
+        {order.status !== 'closed' && (
+          <div className="card">
+            <h2 className="font-semibold text-gray-700 mb-3">To'lov qayd etish</h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-1">To'lov nomi *</label>
+                <input
+                  type="text"
+                  placeholder="masalan, Oldindan to'lov"
+                  className="input w-full"
+                  value={paymentDesc}
+                  onChange={e => setPaymentDesc(e.target.value)}
+                />
+              </div>
+              <div className="sm:w-48">
+                <label className="block text-xs text-gray-500 mb-1">Summa (UZS) *</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  className="input w-full"
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
+                />
+              </div>
+              <button
+                onClick={async () => {
+                  if (!paymentDesc.trim()) { showToast('To\'lov nomini kiriting'); return }
+                  const amt = parseFloat(stripSpaces(paymentAmount))
+                  if (!amt || amt <= 0) { showToast('To\'g\'ri summa kiriting'); return }
+                  setPaymentLoading(true)
+                  try {
+                    await adminRecordPayment(orderNumber, paymentDesc.trim(), amt)
+                    setPaymentDesc('')
+                    setPaymentAmount('')
+                    await reload()
+                    showToast('To\'lov qayd etildi')
+                  } catch (e) {
+                    showToast(e.response?.data?.detail || 'To\'lovni qayd etib bo\'lmadi')
+                  } finally { setPaymentLoading(false) }
+                }}
+                disabled={paymentLoading}
+                className="btn-success whitespace-nowrap"
+              >
+                {paymentLoading ? '…' : 'Qayd etish'}
+              </button>
             </div>
           </div>
         )}

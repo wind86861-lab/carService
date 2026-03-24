@@ -11,6 +11,9 @@ export const getAdminOrderDetail = (orderNumber) =>
 export const forceCloseOrder = (orderNumber, partsCost) =>
   api.patch(`/admin/orders/${orderNumber}/force-close`, { parts_cost: partsCost }).then(r => r.data)
 
+export const adminRecordPayment = (orderNumber, description, amount) =>
+  api.post(`/admin/orders/${orderNumber}/payment`, { description, amount }).then(r => r.data)
+
 export const getAdminClients = (search, isActive, page = 1) =>
   api.get('/admin/clients', { params: { search, is_active: isActive, page } }).then(r => r.data)
 

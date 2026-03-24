@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 
 from bot.database.models import (
+    add_payment,
     block_user,
     force_close_order,
     get_all_clients,
@@ -118,6 +119,29 @@ async def admin_force_close(
         if client:
             await notify_receipt_request(client["telegram_id"], order_number)
     return result
+
+
+@router.post("/orders/{order_number}/payment")
+async def admin_record_payment(
+    order_number: str,
+    body: dict,
+    admin=Depends(require_admin),
+):
+    order = await get_order_by_number(order_number)
+    if not order:
+        raise HTTPException(status_code=404, detail="Buyurtma topilmadi")
+
+    description = (body.get("description") or "").strip()
+    if not description:
+        raise HTTPException(status_code=400, detail="To'lov nomi majburiy")
+
+    amount = body.get("amount")
+    if not amount or float(amount) <= 0:
+        raise HTTPException(status_code=400, detail="Summani kiriting")
+
+    await add_payment(order_number, float(amount), changed_by=admin["id"], description=description)
+    updated = await get_order_by_number(order_number)
+    return {"paid_amount": float(updated["paid_amount"])}
 
 
 # ---------------------------------------------------------------------------
