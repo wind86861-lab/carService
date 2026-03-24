@@ -288,7 +288,7 @@ async def get_orders_by_client(client_id: int):
 
 
 async def link_client_to_order(order_number: str, client_id: int):
-    """Set client_id on both the order and the matching car in a single transaction."""
+    """Set client_id on the order, matching car, and all orders with the same plate."""
     async with async_session() as session:
         async with session.begin():
             await session.execute(
@@ -303,6 +303,28 @@ async def link_client_to_order(order_number: str, client_id: int):
                 ),
                 {"cid": client_id, "num": order_number},
             )
+            # Auto-link all orders with the same plate number
+            plate_row = await session.execute(
+                text("SELECT plate FROM cars WHERE order_number = :num"),
+                {"num": order_number},
+            )
+            plate = plate_row.scalar()
+            if plate:
+                await session.execute(
+                    text(
+                        "UPDATE orders SET client_id = :cid "
+                        "WHERE client_id IS NULL AND car_id IN "
+                        "(SELECT id FROM cars WHERE plate = :plate)"
+                    ),
+                    {"cid": client_id, "plate": plate},
+                )
+                await session.execute(
+                    text(
+                        "UPDATE cars SET client_id = :cid "
+                        "WHERE client_id IS NULL AND plate = :plate"
+                    ),
+                    {"cid": client_id, "plate": plate},
+                )
 
 
 async def confirm_client_receipt(
