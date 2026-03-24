@@ -183,9 +183,11 @@ async def close_order_endpoint(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    from bot.database.models import get_master_total_earnings as _get_total
+    from bot.database.models import get_master_total_earnings as _get_total, get_user_by_id
+    master_user = await get_user_by_id(master["id"])
+    custom_pct = master_user.get("master_share_percent") if master_user else None
     master_total = await _get_total(master["id"])
-    financials = calculate_order_financials(agreed, body.parts_cost, master_total)
+    financials = calculate_order_financials(agreed, body.parts_cost, master_total, custom_master_pct=custom_pct)
     await close_order(
         order_number=order_number,
         parts_cost=body.parts_cost,

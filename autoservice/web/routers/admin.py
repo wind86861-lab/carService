@@ -303,6 +303,29 @@ async def admin_get_master(
     return profile
 
 
+@router.patch("/masters/{master_id}/share-percent")
+async def admin_set_master_share(master_id: int, body: dict, _admin=Depends(require_admin)):
+    """Set custom master share percentage (or reset to default)."""
+    from sqlalchemy import text as sa_text
+    from bot.database.db import async_session
+
+    pct = body.get("master_share_percent")
+    if pct is not None:
+        pct = int(pct)
+        if pct < 0 or pct > 100:
+            raise HTTPException(status_code=400, detail="Foiz 0–100 orasida bo'lishi kerak")
+
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(
+                sa_text("UPDATE users SET master_share_percent = :pct WHERE id = :uid RETURNING id"),
+                {"pct": pct, "uid": master_id},
+            )
+            if not result.first():
+                raise HTTPException(status_code=404, detail="Usta topilmadi")
+    return {"master_share_percent": pct}
+
+
 @router.patch("/masters/{master_id}/promote")
 async def admin_promote(master_id: int, _admin=Depends(require_admin)):
     import httpx

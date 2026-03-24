@@ -52,6 +52,9 @@ export const getAdminMasterProfile = (id, dateFrom, dateTo) =>
 export const setUserRole = (id, role) =>
   api.patch(`/admin/masters/${id}/${role === 'master' ? 'promote' : 'demote'}`).then(r => r.data)
 
+export const setMasterSharePercent = (id, pct) =>
+  api.patch(`/admin/masters/${id}/share-percent`, { master_share_percent: pct }).then(r => r.data)
+
 export const promoteToMaster = (id) =>
   api.patch(`/admin/masters/${id}/promote`).then(r => r.data)
 

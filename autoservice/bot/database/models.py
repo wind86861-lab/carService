@@ -128,6 +128,7 @@ RUN_MIGRATIONS_SQL = [
     text("CREATE INDEX IF NOT EXISTS idx_expenses_order_id ON order_expenses(order_id);"),
     text("ALTER TABLE users ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'uz';"),
     text("ALTER TABLE order_logs ADD COLUMN IF NOT EXISTS receipt_file_id TEXT;"),
+    text("ALTER TABLE users ADD COLUMN IF NOT EXISTS master_share_percent INTEGER;"),
 ]
 
 # ---------------------------------------------------------------------------

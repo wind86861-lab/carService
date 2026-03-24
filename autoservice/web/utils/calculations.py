@@ -23,11 +23,15 @@ def master_ratio_for_earnings(total_earnings: Decimal | int) -> Decimal:
 
 
 def calculate_order_financials(
-    agreed_price: Decimal, parts_cost: Decimal, master_total_earnings: int = 0
+    agreed_price: Decimal, parts_cost: Decimal, master_total_earnings: int = 0,
+    custom_master_pct: int | None = None,
 ) -> OrderFinancials:
     """Calculate profit and shares using performance-based master ratio."""
     profit = agreed_price - parts_cost
-    ratio = master_ratio_for_earnings(master_total_earnings)
+    if custom_master_pct is not None:
+        ratio = Decimal(str(custom_master_pct)) / Decimal("100")
+    else:
+        ratio = master_ratio_for_earnings(master_total_earnings)
     master_share = (profit * ratio).quantize(Decimal("0.01"))
     service_share = (profit - master_share).quantize(Decimal("0.01"))
     master_pct = int(ratio * 100)

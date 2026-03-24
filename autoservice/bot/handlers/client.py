@@ -325,11 +325,16 @@ async def confirm_receipt_callback(callback: CallbackQuery, state: FSMContext, d
     ratio = 0.40
     if order and order.get("master_id"):
         from bot.database.models import get_master_total_earnings
-        total = await get_master_total_earnings(order["master_id"])
-        if total >= 15_000_000:
-            ratio = 0.50
-        elif total >= 10_000_000:
-            ratio = 0.45
+        master_user = await get_user_by_id(order["master_id"])
+        custom_pct = master_user.get("master_share_percent") if master_user else None
+        if custom_pct is not None:
+            ratio = custom_pct / 100.0
+        else:
+            total = await get_master_total_earnings(order["master_id"])
+            if total >= 15_000_000:
+                ratio = 0.50
+            elif total >= 10_000_000:
+                ratio = 0.45
     master_share = int(profit * ratio)
     service_share = profit - master_share
     await confirm_client_receipt(order_number, profit=profit,

@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import StatusBadge from '../../components/StatusBadge'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import { getAdminMasterProfile, blockUser, unblockUser, setUserRole } from '../../api/admin'
-import { ArrowLeft, Ban, CheckCircle, ArrowUp, ArrowDown } from 'lucide-react'
+import { getAdminMasterProfile, blockUser, unblockUser, setUserRole, setMasterSharePercent } from '../../api/admin'
+import { ArrowLeft, Ban, CheckCircle, ArrowUp, ArrowDown, Percent } from 'lucide-react'
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') + ' UZS' }
 function fmtDate(d) {
@@ -37,6 +37,8 @@ export default function AdminMasterProfile() {
   const [confirmAction, setConfirmAction] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [toast, setToast] = useState('')
+  const [sharePercent, setSharePercent] = useState('')
+  const [shareLoading, setShareLoading] = useState(false)
 
   const load = () => {
     const { date_from, date_to } = periodDates(period)
@@ -63,12 +65,33 @@ export default function AdminMasterProfile() {
     } finally { setActionLoading(false) }
   }
 
-  if (!profile && !loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Usta topilmadi.</div></AdminLayout>
-
   const user = profile?.user || {}
   const stats = profile?.stats || {}
   const orders = profile?.orders || []
   const feedbacks = profile?.feedbacks || []
+
+  useEffect(() => {
+    if (user.master_share_percent != null) setSharePercent(String(user.master_share_percent))
+    else setSharePercent('')
+  }, [user.master_share_percent])
+
+  if (!profile && !loading) return <AdminLayout><div className="p-8 text-center text-gray-400">Usta topilmadi.</div></AdminLayout>
+
+  const handleShareSave = async () => {
+    const val = sharePercent.trim() === '' ? null : parseInt(sharePercent)
+    if (val !== null && (isNaN(val) || val < 0 || val > 100)) {
+      showToast('Foiz 0–100 orasida bo\'lishi kerak')
+      return
+    }
+    setShareLoading(true)
+    try {
+      await setMasterSharePercent(Number(id), val)
+      showToast(val !== null ? `Usta ulushi ${val}% ga o'zgartirildi` : 'Standart foiz tiklandi')
+      load()
+    } catch (e) {
+      showToast(e.response?.data?.detail || 'Xatolik yuz berdi')
+    } finally { setShareLoading(false) }
+  }
 
   const kpis = [
     { label: 'Buyurtmalar', value: stats.order_count ?? 0 },
@@ -107,6 +130,29 @@ export default function AdminMasterProfile() {
                   ? <button onClick={() => setConfirmAction({ type: 'block' })} className="btn-danger text-xs sm:text-sm"><Ban size={14} /> Bloklash</button>
                   : <button onClick={() => setConfirmAction({ type: 'unblock' })} className="btn-success text-xs sm:text-sm"><CheckCircle size={14} /> Blokdan chiqarish</button>
                 }
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && user.role === 'master' && (
+          <div className="card">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-gray-700 flex items-center gap-1.5"><Percent size={16} /> Usta ulushi foizi</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Bo'sh qoldirsa standart (40/45/50%) ishlatiladi</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min="0" max="100" placeholder="40"
+                  className="input w-24 text-center"
+                  value={sharePercent}
+                  onChange={e => setSharePercent(e.target.value)}
+                />
+                <span className="text-sm text-gray-500">%</span>
+                <button onClick={handleShareSave} disabled={shareLoading} className="btn-primary text-xs sm:text-sm">
+                  {shareLoading ? '…' : 'Saqlash'}
+                </button>
               </div>
             </div>
           </div>
