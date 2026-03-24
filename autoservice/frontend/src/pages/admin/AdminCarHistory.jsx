@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AdminLayout from '../../components/AdminLayout'
 import StatusBadge from '../../components/StatusBadge'
 import { getAdminCarHistory } from '../../api/admin'
@@ -16,6 +17,7 @@ export default function AdminCarHistory() {
   const [visits, setVisits] = useState([])
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
   const handleSearch = async (e) => {
     e.preventDefault()
@@ -75,7 +77,7 @@ export default function AdminCarHistory() {
                   {visits.map((v, i) => (
                     <div key={v.order_number} className="relative pl-12">
                       <div className="absolute left-3.5 top-4 w-3.5 h-3.5 rounded-full bg-blue-500 border-2 border-white shadow-sm" />
-                      <div className="card">
+                      <div className="card cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/admin/orders/${v.order_number}`)}>
                         <div className="flex items-start justify-between gap-2 mb-3">
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-blue-700">{v.order_number}</span>
