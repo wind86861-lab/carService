@@ -97,20 +97,6 @@ export default function AdminFeedbacks() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {(stats.categories || []).map(c => {
-                const ci = catInfo(c.category)
-                return (
-                  <div key={c.category} className="card text-center">
-                    <p className="text-2xl font-bold">{c.count}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${ci.color}`}>
-                      {ci.emoji} {ci.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-
             {stats.masters?.length > 0 && (
               <div className="card p-0 overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-50 font-medium text-sm text-gray-700">Ustalar reytingi</div>
@@ -150,7 +136,7 @@ export default function AdminFeedbacks() {
           </select>
           <select className="input w-40" value={filters.rating_max} onChange={e => setFilter('rating_max', e.target.value)}>
             <option value="">Barcha baholar</option>
-            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>≤ {n} yulduz</option>)}
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n}>≤ {n} yulduz</option>)}
           </select>
           <input type="date" className="input w-auto text-sm" value={filters.date_from} onChange={e => setFilter('date_from', e.target.value)} />
           <input type="date" className="input w-auto text-sm" value={filters.date_to} onChange={e => setFilter('date_to', e.target.value)} />
