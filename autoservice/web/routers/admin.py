@@ -12,6 +12,8 @@ from fastapi.responses import StreamingResponse
 from bot.database.models import (
     add_payment,
     block_user,
+    create_car,
+    create_order,
     force_close_order,
     get_all_clients,
     get_all_feedbacks,
@@ -24,6 +26,7 @@ from bot.database.models import (
     get_feedback_stats,
     get_financial_report,
     get_master_profile,
+    get_next_order_number,
     get_order_by_number,
     get_order_detail,
     get_order_logs,
@@ -103,6 +106,87 @@ async def admin_get_order(order_number: str, _admin=Depends(require_admin)):
         for e in expenses
     ]
     return order
+
+
+@router.get("/masters-list")
+async def admin_masters_list(_admin=Depends(require_admin)):
+    """Simple list of all masters for dropdowns."""
+    from sqlalchemy import text
+    from bot.database.db import async_session
+    async with async_session() as session:
+        result = await session.execute(
+            text("SELECT id, full_name, username, phone FROM users WHERE role = 'master' AND is_blocked = false ORDER BY full_name")
+        )
+        return [dict(r) for r in result.mappings().all()]
+
+
+@router.post("/orders", status_code=status.HTTP_201_CREATED)
+async def admin_create_order(body: dict, admin=Depends(require_admin)):
+    from decimal import Decimal
+
+    master_id = body.get("master_id")
+    if not master_id:
+        raise HTTPException(status_code=400, detail="Ustani tanlang")
+
+    required = ["brand", "model", "plate", "color", "year", "client_name", "client_phone", "problem", "work_desc", "agreed_price"]
+    for f in required:
+        if not body.get(f):
+            raise HTTPException(status_code=400, detail=f"'{f}' majburiy maydon")
+
+    agreed_price = Decimal(str(body["agreed_price"]))
+    paid_amount = Decimal(str(body.get("paid_amount", 0)))
+    if paid_amount > agreed_price:
+        raise HTTPException(status_code=400, detail="To'langan summa kelishilgan narxdan oshmasligi kerak")
+
+    order_number = await get_next_order_number()
+    car_id = await create_car(
+        order_number=order_number,
+        brand=body["brand"],
+        model=body["model"],
+        plate=body["plate"].upper(),
+        color=body["color"],
+        year=int(body["year"]),
+    )
+    order_id = await create_order(
+        order_number=order_number,
+        car_id=car_id,
+        master_id=int(master_id),
+        client_name=body["client_name"],
+        client_phone=body["client_phone"],
+        problem=body["problem"],
+        work_desc=body["work_desc"],
+        agreed_price=agreed_price,
+        paid_amount=paid_amount,
+    )
+    return {"order_number": order_number, "order_id": order_id}
+
+
+@router.post("/orders/{order_number}/photos")
+async def admin_upload_photos(
+    order_number: str,
+    files: list[UploadFile] = File(...),
+    _admin=Depends(require_admin),
+):
+    from web.utils.photos import save_upload_file, validate_image, get_photo_url
+    from bot.database.models import add_photo, count_photos
+
+    order = await get_order_by_number(order_number)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    existing = await count_photos(order["id"])
+    if existing >= 2:
+        raise HTTPException(status_code=400, detail="Maximum 2 photos per order")
+    if existing + len(files) > 2:
+        raise HTTPException(status_code=400, detail=f"Can only add {2 - existing} more photo(s)")
+
+    results = []
+    for file in files:
+        validate_image(file)
+        filename = await save_upload_file(file)
+        photo_id = await add_photo(order["id"], filename)
+        results.append({"id": photo_id, "file_id": filename, "url": get_photo_url(filename)})
+    return results
 
 
 @router.patch("/orders/{order_number}/force-close")

@@ -5,7 +5,7 @@ import StatusBadge from '../../components/StatusBadge'
 import Pagination from '../../components/Pagination'
 import ExportButton from '../../components/ExportButton'
 import { getAdminOrders, getAdminMasters } from '../../api/admin'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 
 function fmt(n) { return Number(n || 0).toLocaleString('ru-RU') }
 function fmtDate(d) {
@@ -49,7 +49,12 @@ export default function AdminOrders() {
       <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-bold text-gray-900">Buyurtmalar</h1>
-          <ExportButton filters={exportFilters} />
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/admin/new-order')} className="btn-primary flex items-center gap-1.5">
+              <Plus size={16} /> Yangi buyurtma
+            </button>
+            <ExportButton filters={exportFilters} />
+          </div>
         </div>
 
         <form onSubmit={handleSearch} className="card p-4">

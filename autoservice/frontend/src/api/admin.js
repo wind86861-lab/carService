@@ -5,6 +5,18 @@ export const getDashboard = () => api.get('/admin/dashboard').then(r => r.data)
 export const getAdminOrders = (filters = {}, page = 1) =>
   api.get('/admin/orders', { params: { ...filters, page } }).then(r => r.data)
 
+export const getMastersList = () =>
+  api.get('/admin/masters-list').then(r => r.data)
+
+export const adminCreateOrder = (data) =>
+  api.post('/admin/orders', data).then(r => r.data)
+
+export const adminUploadPhotos = (orderNumber, files) => {
+  const form = new FormData()
+  files.forEach((f) => form.append('files', f))
+  return api.post(`/admin/orders/${orderNumber}/photos`, form).then(r => r.data)
+}
+
 export const getAdminOrderDetail = (orderNumber) =>
   api.get(`/admin/orders/${orderNumber}`).then(r => r.data)
 

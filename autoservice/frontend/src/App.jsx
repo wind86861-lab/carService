@@ -18,6 +18,7 @@ import AdminFinancials from './pages/admin/AdminFinancials'
 import AdminBroadcast from './pages/admin/AdminBroadcast'
 import AdminFeedbacks from './pages/admin/AdminFeedbacks'
 import AdminCarHistory from './pages/admin/AdminCarHistory'
+import AdminNewOrder from './pages/admin/AdminNewOrder'
 
 const AuthContext = createContext(null)
 
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/profile" element={<MasterRoute><Profile /></MasterRoute>} />
           <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+          <Route path="/admin/new-order" element={<AdminRoute><AdminNewOrder /></AdminRoute>} />
           <Route path="/admin/orders/:orderNumber" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
           <Route path="/admin/clients" element={<AdminRoute><AdminClients /></AdminRoute>} />
           <Route path="/admin/clients/:id" element={<AdminRoute><AdminClientProfile /></AdminRoute>} />
