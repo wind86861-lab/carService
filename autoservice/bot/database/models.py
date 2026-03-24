@@ -521,20 +521,52 @@ async def create_order(
     """Insert order and initial log entry in a single transaction. Returns order id."""
     async with async_session() as session:
         async with session.begin():
+            # Check if plate already has a linked client from a previous order
+            existing_client = await session.execute(
+                text(
+                    "SELECT client_id FROM cars WHERE id = :cid AND client_id IS NOT NULL"
+                ),
+                {"cid": car_id},
+            )
+            prev_client_id = existing_client.scalar()
+            if prev_client_id is None:
+                # Also check other cars with the same plate
+                plate_row = await session.execute(
+                    text("SELECT plate FROM cars WHERE id = :cid"),
+                    {"cid": car_id},
+                )
+                plate = plate_row.scalar()
+                if plate:
+                    prev_row = await session.execute(
+                        text(
+                            "SELECT client_id FROM cars WHERE plate = :plate "
+                            "AND client_id IS NOT NULL LIMIT 1"
+                        ),
+                        {"plate": plate},
+                    )
+                    prev_client_id = prev_row.scalar()
+
             result = await session.execute(
                 text(
                     "INSERT INTO orders "
-                    "(order_number, car_id, master_id, client_name, client_phone, problem, work_desc, agreed_price, paid_amount) "
-                    "VALUES (:num, :cid, :mid, :cname, :cphone, :prob, :work, :price, :paid) RETURNING id"
+                    "(order_number, car_id, master_id, client_name, client_phone, problem, work_desc, agreed_price, paid_amount, client_id) "
+                    "VALUES (:num, :cid, :mid, :cname, :cphone, :prob, :work, :price, :paid, :client_id) RETURNING id"
                 ),
                 {
                     "num": order_number, "cid": car_id, "mid": master_id,
                     "cname": client_name, "cphone": client_phone,
                     "prob": problem, "work": work_desc,
                     "price": agreed_price, "paid": paid_amount,
+                    "client_id": prev_client_id,
                 },
             )
             order_id = result.scalar_one()
+            # Also set client_id on the new car record if found
+            if prev_client_id:
+                await session.execute(
+                    text("UPDATE cars SET client_id = :cid WHERE id = :car_id"),
+                    {"cid": prev_client_id, "car_id": car_id},
+                )
             await session.execute(
                 text(
                     "INSERT INTO order_logs (order_id, status, note, changed_by) "
