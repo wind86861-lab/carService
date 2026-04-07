@@ -16,10 +16,13 @@ async def send_broadcast(target: str, message: str, sender_id: int, filters: dic
     if target == "all":
         users = await get_all_users()
     elif target == "filtered" and filters:
+        visit_count = filters.get("visit_count")
+        if visit_count is not None:
+            visit_count = int(visit_count) if visit_count else None
         users = await get_filtered_clients(
             date_from=filters.get("date_from"),
             date_to=filters.get("date_to"),
-            visit_count=filters.get("visit_count")
+            visit_count=visit_count
         )
     else:
         role = "client" if target == "clients" else "master"
