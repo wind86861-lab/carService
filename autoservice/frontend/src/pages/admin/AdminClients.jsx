@@ -18,6 +18,10 @@ export default function AdminClients() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [orderCountMin, setOrderCountMin] = useState('')
+  const [orderCountMax, setOrderCountMax] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
@@ -26,7 +30,15 @@ export default function AdminClients() {
   const load = (p = 1) => {
     setLoading(true)
     const isActive = showBlocked ? undefined : true
-    getAdminClients(search || undefined, isActive, p)
+    const filters = {
+      search: search || undefined,
+      is_active: isActive,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
+      order_count_min: orderCountMin || undefined,
+      order_count_max: orderCountMax || undefined,
+    }
+    getAdminClients(filters, p)
       .then(d => { setClients(d.items || []); setTotal(d.total || 0); setPage(p) })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -55,19 +67,77 @@ export default function AdminClients() {
       <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
         <h1 className="text-xl font-bold text-gray-900">Mijozlar</h1>
 
-        <div className="card p-3 sm:p-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-          <div className="flex gap-2 flex-1">
-            <input
-              className="input flex-1" placeholder="Ism yoki telefon bo'yicha qidirish…"
-              value={search} onChange={e => setSearch(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && load(1)}
-            />
-            <button onClick={() => load(1)} className="btn-primary px-3"><Search size={16} /></button>
+        <div className="card p-3 sm:p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+            <div className="flex gap-2 flex-1">
+              <input
+                className="input flex-1" placeholder="Ism yoki telefon bo'yicha qidirish…"
+                value={search} onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && load(1)}
+              />
+              <button onClick={() => load(1)} className="btn-primary px-3"><Search size={16} /></button>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input type="checkbox" className="rounded" checked={showBlocked} onChange={e => setShowBlocked(e.target.checked)} />
+              Bloklangan foydalanuvchilarni ko'rsatish
+            </label>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-            <input type="checkbox" className="rounded" checked={showBlocked} onChange={e => setShowBlocked(e.target.checked)} />
-            Bloklangan foydalanuvchilarni ko'rsatish
-          </label>
+
+          <div className="flex flex-wrap gap-2 items-center text-sm">
+            <span className="text-gray-600 font-medium">Filtrlar:</span>
+            <div className="flex items-center gap-2">
+              <label className="text-gray-500">Sana:</label>
+              <input
+                type="date"
+                className="input w-auto text-sm py-1.5"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                placeholder="Dan"
+              />
+              <span className="text-gray-400">—</span>
+              <input
+                type="date"
+                className="input w-auto text-sm py-1.5"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                placeholder="Gacha"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-gray-500">Buyurtmalar soni:</label>
+              <input
+                type="number"
+                className="input w-20 text-sm py-1.5 text-center"
+                value={orderCountMin}
+                onChange={e => setOrderCountMin(e.target.value)}
+                placeholder="Dan"
+                min="0"
+              />
+              <span className="text-gray-400">—</span>
+              <input
+                type="number"
+                className="input w-20 text-sm py-1.5 text-center"
+                value={orderCountMax}
+                onChange={e => setOrderCountMax(e.target.value)}
+                placeholder="Gacha"
+                min="0"
+              />
+            </div>
+            <button onClick={() => load(1)} className="btn-primary text-sm py-1.5">Qo'llash</button>
+            <button
+              onClick={() => {
+                setDateFrom('')
+                setDateTo('')
+                setOrderCountMin('')
+                setOrderCountMax('')
+                setSearch('')
+                setShowBlocked(false)
+              }}
+              className="btn-secondary text-sm py-1.5"
+            >
+              Tozalash
+            </button>
+          </div>
         </div>
 
         <div className="card p-0 overflow-hidden">

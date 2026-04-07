@@ -243,11 +243,15 @@ async def admin_record_payment(
 async def admin_get_clients(
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    order_count_min: Optional[int] = None,
+    order_count_max: Optional[int] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     _admin=Depends(require_admin),
 ):
-    return await get_all_clients(search, is_active, page, page_size)
+    return await get_all_clients(search, is_active, date_from, date_to, order_count_min, order_count_max, page, page_size)
 
 
 @router.get("/clients/{client_id}")

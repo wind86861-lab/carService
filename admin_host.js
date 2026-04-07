@@ -31,8 +31,16 @@ export const adminRecordPayment = (orderNumber, description, amount, receiptFile
   return api.post(`/admin/orders/${orderNumber}/payment`, form).then(r => r.data)
 }
 
-export const getAdminClients = (filters, page = 1) =>
-  api.get('/admin/clients', { params: { ...filters, page } }).then(r => r.data)
+export const adminAddExpense = (orderNumber, itemName, amount, receiptFile) => {
+  const form = new FormData()
+  form.append('item_name', itemName)
+  form.append('amount', amount)
+  if (receiptFile) form.append('receipt', receiptFile)
+  return api.post(`/orders/${orderNumber}/expenses`, form).then(r => r.data)
+}
+
+export const getAdminClients = (search, isActive, page = 1) =>
+  api.get('/admin/clients', { params: { search, is_active: isActive, page } }).then(r => r.data)
 
 export const getAdminClientProfile = (id) =>
   api.get(`/admin/clients/${id}`).then(r => r.data)
@@ -80,3 +88,7 @@ export const getFeedbackStats = () =>
 
 export const getAdminCarHistory = (plate) =>
   api.get(`/admin/cars/${encodeURIComponent(plate)}`).then(r => r.data)
+
+export const adminDeleteOrder = (orderNumber) => {
+  return api.delete("/orders/" + orderNumber).then(r => r.data)
+}

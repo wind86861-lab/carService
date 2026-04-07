@@ -1091,11 +1091,16 @@ async def force_close_order(order_number: str, parts_cost: float, admin_id: int)
 async def get_all_clients(
     search: str | None = None,
     is_active: bool | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    order_count_min: int | None = None,
+    order_count_max: int | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict:
     """Return paginated client list with order count and avg_rating."""
     where = ["u.role = 'client'"]
+    having = []
     params: dict = {}
     if search:
         where.append("(u.full_name ILIKE :search OR u.phone ILIKE :search)")
@@ -1103,16 +1108,43 @@ async def get_all_clients(
     if is_active is not None:
         where.append("u.is_active = :is_active")
         params["is_active"] = is_active
+    if date_from:
+        where.append("EXISTS (SELECT 1 FROM orders o2 WHERE o2.client_id = u.id AND o2.created_at >= :date_from)")
+        params["date_from"] = date_from
+    if date_to:
+        where.append("EXISTS (SELECT 1 FROM orders o2 WHERE o2.client_id = u.id AND o2.created_at <= :date_to)")
+        params["date_to"] = date_to
+    
     where_sql = " AND ".join(where)
     offset = (page - 1) * page_size
     params["limit"] = page_size
     params["offset"] = offset
 
+    # Build HAVING clause for order count filter
+    if order_count_min is not None:
+        having.append("COALESCE(stats.order_count, 0) >= :order_count_min")
+        params["order_count_min"] = order_count_min
+    if order_count_max is not None:
+        having.append("COALESCE(stats.order_count, 0) <= :order_count_max")
+        params["order_count_max"] = order_count_max
+    
+    having_sql = (" HAVING " + " AND ".join(having)) if having else ""
+
     async with async_session() as session:
-        count_result = await session.execute(
-            text(f"SELECT COUNT(*) FROM users u WHERE {where_sql}"), params
-        )
+        count_query = f"""
+            SELECT COUNT(*) FROM (
+                SELECT u.id FROM users u
+                LEFT JOIN (
+                    SELECT o.client_id, COUNT(o.id) AS order_count
+                    FROM orders o GROUP BY o.client_id
+                ) stats ON stats.client_id = u.id
+                WHERE {where_sql}
+                {having_sql}
+            ) subq
+        """
+        count_result = await session.execute(text(count_query), params)
         total = count_result.scalar()
+        
         rows = await session.execute(
             text(
                 f"SELECT u.id, u.full_name, u.phone, u.telegram_id, u.is_active, u.registered_at, "
@@ -1127,6 +1159,7 @@ async def get_all_clients(
                 "  GROUP BY o.client_id"
                 ") stats ON stats.client_id = u.id "
                 f"WHERE {where_sql} "
+                f"{having_sql} "
                 "ORDER BY u.registered_at DESC LIMIT :limit OFFSET :offset"
             ),
             params,
