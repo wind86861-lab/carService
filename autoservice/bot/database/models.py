@@ -1099,6 +1099,8 @@ async def get_all_clients(
     page_size: int = 20,
 ) -> dict:
     """Return paginated client list with order count and avg_rating."""
+    from datetime import datetime
+    
     where = ["u.role = 'client'"]
     having = []
     params: dict = {}
@@ -1110,10 +1112,10 @@ async def get_all_clients(
         params["is_active"] = is_active
     if date_from:
         where.append("EXISTS (SELECT 1 FROM orders o2 WHERE o2.client_id = u.id AND o2.created_at >= :date_from)")
-        params["date_from"] = date_from
+        params["date_from"] = datetime.fromisoformat(date_from).date()
     if date_to:
         where.append("EXISTS (SELECT 1 FROM orders o2 WHERE o2.client_id = u.id AND o2.created_at <= :date_to)")
-        params["date_to"] = date_to
+        params["date_to"] = datetime.fromisoformat(date_to).date()
     
     where_sql = " AND ".join(where)
     offset = (page - 1) * page_size
@@ -1173,6 +1175,8 @@ async def get_filtered_clients(
     visit_count: int | None = None,
 ) -> list:
     """Return clients filtered by date range and visit count for broadcast."""
+    from datetime import datetime
+    
     async with async_session() as session:
         where = ["u.role = 'client'", "u.is_active = TRUE"]
         params: dict = {}
@@ -1182,10 +1186,10 @@ async def get_filtered_clients(
             count_where = []
             if date_from:
                 count_where.append("o.created_at >= :date_from")
-                params["date_from"] = date_from
+                params["date_from"] = datetime.fromisoformat(date_from).date()
             if date_to:
                 count_where.append("o.created_at <= :date_to")
-                params["date_to"] = date_to
+                params["date_to"] = datetime.fromisoformat(date_to).date()
             
             count_where_sql = " AND ".join(count_where) if count_where else "1=1"
             
