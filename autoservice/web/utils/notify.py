@@ -45,11 +45,11 @@ def _confirmation_keyboard_dict(order_number: str, remaining: str = "0", lang: s
 
 async def notify_status_changed(client_telegram_id: int, order_number: str, status: str, car_info: str):
     messages = {
-        "preparation": f"🔧 <b>Order {order_number}</b> ({car_info})\n\nYour car repair has started. We are preparing for the work.",
-        "in_process": f"⚙️ <b>Order {order_number}</b> ({car_info})\n\nWork on your car is currently in progress.",
-        "ready": f"✅ <b>Order {order_number}</b> ({car_info})\n\nYour car is ready. You can come pick it up.",
+        "preparation": f"🔧 <b>Buyurtma {order_number}</b> ({car_info})\n\nMashinangizni ta'mirlash boshlandi. Ish tayyorlanmoqda.",
+        "in_process": f"⚙️ <b>Buyurtma {order_number}</b> ({car_info})\n\nMashinangiz ustida ish jarayonda.",
+        "ready": f"✅ <b>Buyurtma {order_number}</b> ({car_info})\n\nMashinangiz tayyor. Olib ketishingiz mumkin! 🚗",
     }
-    text = messages.get(status, f"<b>Order {order_number}</b>\n\nStatus updated to: {status}")
+    text = messages.get(status, f"<b>Buyurtma {order_number}</b>\n\nHolat yangilandi: {status}")
     await send_bot_notification(client_telegram_id, text)
 
 
@@ -59,12 +59,13 @@ async def notify_receipt_request(
     paid_amount: str = "0", remaining: str = "0",
 ):
     text = (
-        f"📋 <b>Order {order_number}</b>\n"
-        f"🚗 {car_info}\n\n"
-        f"💰 Price: <b>{agreed_price}</b>\n"
-        f"✅ Paid: <b>{paid_amount}</b>\n"
-        f"💵 Remaining: <b>{remaining}</b>\n\n"
-        f"Did you pay <b>{remaining}</b> and receive your car?"
+        f"📋 <b>Buyurtma {order_number}</b>\n"
+        f"🚗 Mashina: {car_info}\n\n"
+        f"Usta buyurtmani tugalladi.\n\n"
+        f"💰 Kelishilgan narx: <b>{agreed_price}</b>\n"
+        f"✅ To'langan: <b>{paid_amount}</b>\n"
+        f"💵 Qoldiq: <b>{remaining}</b>\n\n"
+        f"Siz <b>{remaining}</b> to'ladingizmi va mashinangizni oldingizmi?"
     )
     keyboard = _confirmation_keyboard_dict(order_number, remaining=remaining)
     await send_bot_notification(client_telegram_id, text, reply_markup=keyboard)
