@@ -1133,39 +1133,32 @@ async def get_all_clients(
     having_sql = (" HAVING " + " AND ".join(having)) if having else ""
 
     async with async_session() as session:
-        count_query = f"""
-            SELECT COUNT(*) FROM (
-                SELECT u.id FROM users u
-                LEFT JOIN (
-                    SELECT o.client_id, COUNT(o.id) AS order_count
-                    FROM orders o GROUP BY o.client_id
-                ) stats ON stats.client_id = u.id
-                WHERE {where_sql}
-                {having_sql}
-            ) subq
+        # Build the main query with proper GROUP BY when using HAVING
+        main_query = f"""
+            SELECT u.id, u.full_name, u.phone, u.telegram_id, u.is_active, u.registered_at,
+                   COALESCE(stats.order_count, 0) AS order_count,
+                   COALESCE(stats.avg_rating, 0) AS avg_rating,
+                   stats.last_order_date
+            FROM users u
+            LEFT JOIN (
+                SELECT o.client_id, COUNT(o.id) AS order_count,
+                       AVG(f.rating) AS avg_rating, MAX(o.created_at) AS last_order_date
+                FROM orders o LEFT JOIN feedbacks f ON f.order_id = o.id
+                GROUP BY o.client_id
+            ) stats ON stats.client_id = u.id
+            WHERE {where_sql}
+            {having_sql}
         """
+        
+        # Count query
+        count_query = f"SELECT COUNT(*) FROM ({main_query}) subq"
         count_result = await session.execute(text(count_query), params)
         total = count_result.scalar()
         
-        rows = await session.execute(
-            text(
-                f"SELECT u.id, u.full_name, u.phone, u.telegram_id, u.is_active, u.registered_at, "
-                "COALESCE(stats.order_count, 0) AS order_count, "
-                "COALESCE(stats.avg_rating, 0) AS avg_rating, "
-                "stats.last_order_date "
-                "FROM users u "
-                "LEFT JOIN ("
-                "  SELECT o.client_id, COUNT(o.id) AS order_count, "
-                "  AVG(f.rating) AS avg_rating, MAX(o.created_at) AS last_order_date "
-                "  FROM orders o LEFT JOIN feedbacks f ON f.order_id = o.id "
-                "  GROUP BY o.client_id"
-                ") stats ON stats.client_id = u.id "
-                f"WHERE {where_sql} "
-                f"{having_sql} "
-                "ORDER BY u.registered_at DESC LIMIT :limit OFFSET :offset"
-            ),
-            params,
-        )
+        # Data query with pagination
+        data_query = f"{main_query} ORDER BY u.registered_at DESC LIMIT :limit OFFSET :offset"
+        rows = await session.execute(text(data_query), params)
+        
         return {"items": rows.mappings().all(), "total": total, "page": page, "page_size": page_size}
 
 
