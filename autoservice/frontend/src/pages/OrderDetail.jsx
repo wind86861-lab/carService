@@ -182,19 +182,42 @@ export default function OrderDetail() {
           </div>
 
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">Moliyaviy</h2>
-            <InfoRow label="Kelishilgan narx" value={fmt(order.agreed_price)} />
-            <InfoRow label="To'langan" value={fmt(order.paid_amount)} />
-            <InfoRow label="Qoldiq" value={remaining > 0 ? fmt(remaining) : '✅ To\'liq to\'langan'} />
+            <h2 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+              <span className="text-2xl">💰</span>
+              <span>Moliyaviy ma'lumotlar</span>
+            </h2>
+
+            <div className="bg-blue-50 rounded-lg p-4 mb-4 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Kelishilgan narx:</span>
+                <span className="text-xl font-bold text-blue-700">{fmt(order.agreed_price)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">To'langan:</span>
+                <span className="text-lg font-semibold text-green-700">{fmt(order.paid_amount)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-blue-200">
+                <span className="text-sm font-medium text-gray-700">Qoldiq:</span>
+                <span className={`text-lg font-bold ${remaining > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {remaining > 0 ? fmt(remaining) : '✅ To\'liq to\'langan'}
+                </span>
+              </div>
+            </div>
+
             {order.status === 'closed' && (
-              <>
-                <InfoRow label="Ehtiyot qismlar" value={fmt(order.parts_cost)} />
-                <InfoRow label="Foyda" value={fmt(order.profit)} />
-                <InfoRow label="Usta ulushi (40%)" value={fmt(order.master_share)} />
-                <InfoRow label="Servis ulushi (60%)" value={fmt(order.service_share)} />
-              </>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">📊 Yakuniy hisob-kitob</h3>
+                <InfoRow label="Ehtiyot qismlar xarajati" value={fmt(order.parts_cost)} />
+                <InfoRow label="Sof foyda" value={fmt(order.profit)} />
+                <div className="border-t border-gray-200 mt-3 pt-3">
+                  <InfoRow label="Usta ulushi" value={fmt(order.master_share)} />
+                  <InfoRow label="Servis ulushi" value={fmt(order.service_share)} />
+                </div>
+              </div>
             )}
-            <div className="mt-4 border-t border-gray-50 pt-4">
+
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Sanalar</h3>
               <InfoRow label="Yaratilgan" value={fmtDate(order.created_at)} />
               {order.ready_at && <InfoRow label="Tayyor bo'lgan" value={fmtDate(order.ready_at)} />}
               {order.closed_at && <InfoRow label="Yopilgan" value={fmtDate(order.closed_at)} />}
@@ -218,38 +241,58 @@ export default function OrderDetail() {
 
         {(order.expenses || []).length > 0 && (
           <div className="card">
-            <h2 className="font-semibold text-gray-700 mb-3">🔩 Ehtiyot qismlar va Xarajatlar</h2>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">🔩</span>
+              <h2 className="font-semibold text-gray-700">Ehtiyot qismlar va Xarajatlar</h2>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Buyurtma uchun sotib olingan ehtiyot qismlar va boshqa xarajatlar ro'yxati</p>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 text-gray-500 text-xs uppercase">
-                    <th className="text-left py-2 pr-3">Nomi</th>
-                    <th className="text-right py-2 pr-3">Summa</th>
-                    <th className="text-left py-2">Chek</th>
+                  <tr className="bg-gray-50 border-b-2 border-gray-200">
+                    <th className="text-left py-3 px-3 font-semibold text-gray-700">Nomi</th>
+                    <th className="text-right py-3 px-3 font-semibold text-gray-700">Summa</th>
+                    <th className="text-center py-3 px-3 font-semibold text-gray-700">Chek rasmi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(order.expenses || []).map(e => (
-                    <tr key={e.id} className="border-b border-gray-50 last:border-0">
-                      <td className="py-2 pr-3 font-medium">{e.item_name}</td>
-                      <td className="py-2 pr-3 text-right text-blue-700 font-semibold whitespace-nowrap">{fmt(e.amount)}</td>
-                      <td className="py-2">
+                  {(order.expenses || []).map((e, idx) => (
+                    <tr key={e.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-semibold">
+                            {idx + 1}
+                          </span>
+                          <span className="font-medium text-gray-800">{e.item_name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <span className="text-blue-700 font-bold text-base">{fmt(e.amount)}</span>
+                      </td>
+                      <td className="py-3 px-3 text-center">
                         {e.receipt_url
                           ? <a href={e.receipt_url} target="_blank" rel="noreferrer"
-                            className="inline-block">
-                            <img src={e.receipt_url} alt="receipt" className="h-10 w-14 object-cover rounded border border-gray-200 hover:opacity-80" />
+                            className="inline-block group">
+                            <img src={e.receipt_url} alt="chek"
+                              className="h-12 w-16 object-cover rounded-lg border-2 border-gray-200 group-hover:border-blue-400 transition-all shadow-sm" />
+                            <p className="text-xs text-gray-500 mt-1">Ko'rish</p>
                           </a>
-                          : <span className="text-gray-300 text-xs">—</span>
+                          : <span className="text-gray-400 text-xs italic">Chek yuklanmagan</span>
                         }
                       </td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-gray-200">
-                    <td className="py-2 font-semibold text-gray-700">Jami</td>
-                    <td className="py-2 text-right font-bold text-blue-800">{fmt((order.expenses || []).reduce((s, e) => s + e.amount, 0))}</td>
-                    <td />
+                  <tr className="bg-blue-50 border-t-2 border-blue-200">
+                    <td className="py-3 px-3 font-bold text-gray-800">JAMI XARAJAT:</td>
+                    <td className="py-3 px-3 text-right">
+                      <span className="text-xl font-bold text-blue-800">
+                        {fmt((order.expenses || []).reduce((s, e) => s + e.amount, 0))}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3" />
                   </tr>
                 </tfoot>
               </table>
@@ -286,34 +329,47 @@ export default function OrderDetail() {
             </div>
 
             {order.status !== 'closed' && (
-              <div className="border-t border-gray-50 pt-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">To'lov qayd etish</p>
-                <div className="space-y-2">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text" placeholder="To'lov nomi *"
-                      className="input flex-1"
-                      value={paymentDesc}
-                      onChange={e => setPaymentDesc(e.target.value)}
-                    />
-                    <input
-                      type="text" inputMode="numeric" placeholder="Summa (UZS) *"
-                      className="input sm:w-40"
-                      value={paymentAmount}
-                      onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
-                    />
+              <div className="border-t border-gray-100 pt-4 mt-4">
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">💵</span>
+                    <h3 className="text-sm font-semibold text-gray-700">Yangi to'lov qayd etish</h3>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 hover:border-blue-400 transition-colors flex-1">
-                      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                      <span>{paymentReceipt ? paymentReceipt.name : 'Chek rasmi *'}</span>
-                      <input
-                        type="file" accept="image/*" className="hidden"
-                        onChange={e => setPaymentReceipt(e.target.files[0] || null)}
-                      />
-                    </label>
-                    <button onClick={handlePayment} disabled={paymentLoading} className="btn-success whitespace-nowrap">
-                      {paymentLoading ? '…' : 'Qayd etish'}
+                  <p className="text-xs text-gray-600 mb-3">Mijozdan olingan to'lovni quyida qayd eting</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">To'lov nomi *</label>
+                        <input
+                          type="text" placeholder="masalan, Oldindan to'lov"
+                          className="input w-full"
+                          value={paymentDesc}
+                          onChange={e => setPaymentDesc(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Summa (UZS) *</label>
+                        <input
+                          type="text" inputMode="numeric" placeholder="0"
+                          className="input w-full text-lg font-semibold"
+                          value={paymentAmount}
+                          onChange={e => setPaymentAmount(formatWithSpaces(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Chek rasmi (ixtiyoriy) *</label>
+                      <label className="flex items-center gap-3 cursor-pointer border-2 border-dashed border-gray-300 rounded-lg px-4 py-3 text-sm text-gray-600 hover:border-green-400 hover:bg-green-50 transition-all">
+                        <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <span className="flex-1">{paymentReceipt ? `✓ ${paymentReceipt.name}` : 'Chek rasmini yuklang'}</span>
+                        <input
+                          type="file" accept="image/*" className="hidden"
+                          onChange={e => setPaymentReceipt(e.target.files[0] || null)}
+                        />
+                      </label>
+                    </div>
+                    <button onClick={handlePayment} disabled={paymentLoading} className="btn-success w-full py-3 text-base font-semibold">
+                      {paymentLoading ? 'Qayd etilmoqda...' : '✓ Qayd etish'}
                     </button>
                   </div>
                 </div>
