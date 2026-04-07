@@ -1122,19 +1122,18 @@ async def get_all_clients(
     params["limit"] = page_size
     params["offset"] = offset
 
-    # Build HAVING clause for order count filter
+    # Build WHERE clause for order count filter (move from HAVING to WHERE on subquery result)
+    order_count_filter = []
     if order_count_min is not None:
-        having.append("COALESCE(stats.order_count, 0) >= :order_count_min")
+        order_count_filter.append("order_count >= :order_count_min")
         params["order_count_min"] = order_count_min
     if order_count_max is not None:
-        having.append("COALESCE(stats.order_count, 0) <= :order_count_max")
+        order_count_filter.append("order_count <= :order_count_max")
         params["order_count_max"] = order_count_max
-    
-    having_sql = (" HAVING " + " AND ".join(having)) if having else ""
 
     async with async_session() as session:
-        # Build the main query with proper GROUP BY when using HAVING
-        main_query = f"""
+        # Build the base query with stats
+        base_query = f"""
             SELECT u.id, u.full_name, u.phone, u.telegram_id, u.is_active, u.registered_at,
                    COALESCE(stats.order_count, 0) AS order_count,
                    COALESCE(stats.avg_rating, 0) AS avg_rating,
@@ -1147,8 +1146,14 @@ async def get_all_clients(
                 GROUP BY o.client_id
             ) stats ON stats.client_id = u.id
             WHERE {where_sql}
-            {having_sql}
         """
+        
+        # If we have order count filters, wrap in another query
+        if order_count_filter:
+            order_count_where = " AND ".join(order_count_filter)
+            main_query = f"SELECT * FROM ({base_query}) filtered WHERE {order_count_where}"
+        else:
+            main_query = base_query
         
         # Count query
         count_query = f"SELECT COUNT(*) FROM ({main_query}) subq"
@@ -1156,7 +1161,7 @@ async def get_all_clients(
         total = count_result.scalar()
         
         # Data query with pagination
-        data_query = f"{main_query} ORDER BY u.registered_at DESC LIMIT :limit OFFSET :offset"
+        data_query = f"{main_query} ORDER BY registered_at DESC LIMIT :limit OFFSET :offset"
         rows = await session.execute(text(data_query), params)
         
         return {"items": rows.mappings().all(), "total": total, "page": page, "page_size": page_size}
