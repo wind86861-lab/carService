@@ -207,11 +207,11 @@ export default function NewOrder() {
 
         <div className="card space-y-4">
           <h2 className="font-semibold text-gray-700">Buyurtma tafsilotlari</h2>
-          <Field label="Muammo tavsifi *" error={errors.problem}>
-            <textarea className="input resize-none" rows={3} value={form.problem} onChange={set('problem')} placeholder="Muammoni tasvirlab bering (kamida 10 belgi)" />
+          <Field label="Muammo (mijoz nima muammo bilan keldi?) *" error={errors.problem}>
+            <textarea className="input resize-none" rows={3} value={form.problem} onChange={set('problem')} placeholder="Masalan: Mashina yonilg'i iste'mol qiladi, dvigatel shovqin chiqaradi, tormoz ishlamayapti..." />
           </Field>
-          <Field label="Ish tavsifi *" error={errors.work_desc}>
-            <textarea className="input resize-none" rows={3} value={form.work_desc} onChange={set('work_desc')} placeholder="Bajariladigan ishni tasvirlab bering (kamida 10 belgi)" />
+          <Field label="Bajariladigan ish (qanday ishlar bajariladi?) *" error={errors.work_desc}>
+            <textarea className="input resize-none" rows={3} value={form.work_desc} onChange={set('work_desc')} placeholder="Masalan: Dvigatel diagnostikasi, moy almashtirish, tormoz kolodkalarini almashtirish..." />
           </Field>
         </div>
 
