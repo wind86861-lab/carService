@@ -66,8 +66,8 @@ export const exportFinancials = (filters = {}, format = 'xlsx') => {
   return `/api/admin/financials/export?${params.toString()}`
 }
 
-export const sendBroadcast = (target, message) =>
-  api.post('/admin/broadcast', { target, message }).then(r => r.data)
+export const sendBroadcast = (target, message, filters) =>
+  api.post('/admin/broadcast', { target, message, filters }).then(r => r.data)
 
 export const getBroadcasts = () =>
   api.get('/admin/broadcasts').then(r => r.data)

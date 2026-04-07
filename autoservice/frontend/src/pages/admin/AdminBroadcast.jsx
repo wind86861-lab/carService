@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { sendBroadcast, getBroadcasts } from '../../api/admin'
-import { Send, Users, User, Wrench } from 'lucide-react'
+import { Send, Users, User, Wrench, Filter } from 'lucide-react'
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -13,11 +13,15 @@ const TARGETS = [
   { value: 'all', label: 'Barchaga', desc: 'Barcha mijoz va ustalarga yuborish', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
   { value: 'clients', label: 'Faqat mijozlar', desc: 'Faqat ro\'yxatdagi mijozlarga yuborish', icon: User, color: 'text-green-600', bg: 'bg-green-50' },
   { value: 'masters', label: 'Faqat ustalar', desc: 'Faqat ro\'yxatdagi ustalarga yuborish', icon: Wrench, color: 'text-orange-600', bg: 'bg-orange-50' },
+  { value: 'filtered', label: 'Filtr bo\'yicha mijozlar', desc: 'Sana va tashrif soniga qarab mijozlarga yuborish', icon: Filter, color: 'text-purple-600', bg: 'bg-purple-50' },
 ]
 
 export default function AdminBroadcast() {
   const [target, setTarget] = useState('all')
   const [message, setMessage] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [visitCount, setVisitCount] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState(null)
@@ -31,10 +35,18 @@ export default function AdminBroadcast() {
   const handleSend = async () => {
     setSending(true)
     try {
-      const res = await sendBroadcast(target, message)
+      const filters = target === 'filtered' ? {
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        visit_count: visitCount || undefined,
+      } : undefined
+      const res = await sendBroadcast(target, message, filters)
       setResult(res)
       setShowConfirm(false)
       setMessage('')
+      setDateFrom('')
+      setDateTo('')
+      setVisitCount('')
       getBroadcasts().then(setHistory).catch(console.error)
     } catch (e) {
       setResult({ error: e.response?.data?.detail || 'Send failed' })
@@ -65,6 +77,48 @@ export default function AdminBroadcast() {
                   </div>
                 </button>
               ))}
+
+              {target === 'filtered' && (
+                <div className="border-2 border-purple-200 rounded-xl p-4 space-y-3 bg-purple-50/30">
+                  <h3 className="font-medium text-sm text-gray-700">Filtr sozlamalari</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Sana oralig'i</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="date"
+                          className="input text-sm py-1.5 flex-1"
+                          value={dateFrom}
+                          onChange={e => setDateFrom(e.target.value)}
+                          placeholder="Dan"
+                        />
+                        <span className="text-gray-400">—</span>
+                        <input
+                          type="date"
+                          className="input text-sm py-1.5 flex-1"
+                          value={dateTo}
+                          onChange={e => setDateTo(e.target.value)}
+                          placeholder="Gacha"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Tashrif soni (masalan: 4)</label>
+                      <input
+                        type="number"
+                        className="input text-sm py-1.5 w-full"
+                        value={visitCount}
+                        onChange={e => setVisitCount(e.target.value)}
+                        placeholder="Necha marta kelgan"
+                        min="1"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 italic">
+                      Masalan: 01.01.2024 dan 04.04.2024 gacha 4 marta kelgan mijozlarga xabar yuborish
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="card space-y-3">

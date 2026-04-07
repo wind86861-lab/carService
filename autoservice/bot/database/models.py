@@ -1167,6 +1167,47 @@ async def get_all_clients(
         return {"items": rows.mappings().all(), "total": total, "page": page, "page_size": page_size}
 
 
+async def get_filtered_clients(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    visit_count: int | None = None,
+) -> list:
+    """Return clients filtered by date range and visit count for broadcast."""
+    async with async_session() as session:
+        where = ["u.role = 'client'", "u.is_active = TRUE"]
+        params: dict = {}
+        
+        if date_from or date_to or visit_count:
+            # Build subquery for order count within date range
+            count_where = []
+            if date_from:
+                count_where.append("o.created_at >= :date_from")
+                params["date_from"] = date_from
+            if date_to:
+                count_where.append("o.created_at <= :date_to")
+                params["date_to"] = date_to
+            
+            count_where_sql = " AND ".join(count_where) if count_where else "1=1"
+            
+            if visit_count:
+                where.append(
+                    f"(SELECT COUNT(*) FROM orders o WHERE o.client_id = u.id AND {count_where_sql}) = :visit_count"
+                )
+                params["visit_count"] = visit_count
+            else:
+                where.append(
+                    f"EXISTS (SELECT 1 FROM orders o WHERE o.client_id = u.id AND {count_where_sql})"
+                )
+        
+        where_sql = " AND ".join(where)
+        
+        rows = await session.execute(
+            text(f"SELECT u.id, u.telegram_id, u.full_name FROM users u WHERE {where_sql}"),
+            params,
+        )
+        return rows.mappings().all()
+
+
 async def get_client_profile(client_id: int) -> dict | None:
     """Return full client profile including orders and feedbacks."""
     async with async_session() as session:

@@ -511,11 +511,12 @@ async def admin_financials_export(
 async def admin_broadcast(body: dict, admin=Depends(require_admin)):
     target = body.get("target", "all")
     message = body.get("message", "").strip()
+    filters = body.get("filters")
     if not message:
         raise HTTPException(status_code=400, detail="Message cannot be empty")
-    if target not in ("all", "clients", "masters"):
+    if target not in ("all", "clients", "masters", "filtered"):
         raise HTTPException(status_code=400, detail="Invalid target")
-    return await send_broadcast(target, message, admin["id"])
+    return await send_broadcast(target, message, admin["id"], filters)
 
 
 @router.get("/broadcasts")

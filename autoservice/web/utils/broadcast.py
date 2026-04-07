@@ -3,7 +3,7 @@ import logging
 
 import httpx
 
-from bot.database.models import get_all_users, get_users_by_role, save_broadcast
+from bot.database.models import get_all_users, get_users_by_role, get_filtered_clients, save_broadcast
 from web.config import BOT_TOKEN
 
 logger = logging.getLogger(__name__)
@@ -11,10 +11,16 @@ logger = logging.getLogger(__name__)
 _TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
 
-async def send_broadcast(target: str, message: str, sender_id: int) -> dict:
+async def send_broadcast(target: str, message: str, sender_id: int, filters: dict | None = None) -> dict:
     """Send a broadcast message to the target audience and record it in the DB."""
     if target == "all":
         users = await get_all_users()
+    elif target == "filtered" and filters:
+        users = await get_filtered_clients(
+            date_from=filters.get("date_from"),
+            date_to=filters.get("date_to"),
+            visit_count=filters.get("visit_count")
+        )
     else:
         role = "client" if target == "clients" else "master"
         users = await get_users_by_role(role)
