@@ -121,7 +121,7 @@ def notify_master_dispute_with_text(
 async def notify_admin_dispute_with_text(
     order_number: str, client_name: str, master_name: str, issue_text: str
 ) -> None:
-    """Enqueue dispute notification with issue text to all admins."""
+    """Enqueue dispute notification with issue text to all admins and admin group."""
     try:
         admins = await get_users_by_role("admin")
         for admin in admins:
@@ -135,9 +135,22 @@ async def notify_admin_dispute_with_text(
                 f"{client_lbl}: {client_name}\n"
                 f"{master_lbl}: {master_name}\n"
                 f"{issue_lbl}: <i>{issue_text}</i>\n\n"
-                f"{'Buyurtma holati «jarayonda» ga qaytarildi.' if lang == 'uz' else 'Статус заказа возвращён на «в процессе».'}"
+                f"{'Buyurtma holati «jarayonda» ga qaytarildi.' if lang == 'uz' else 'Статус заказа возвращён на «в процессе».'}'"
             )
             _q().enqueue(telegram_id=admin["telegram_id"], message=text)
+        
+        # Also send to admin group chat if configured
+        from web.config import ADMIN_GROUP_CHAT_ID
+        if ADMIN_GROUP_CHAT_ID:
+            group_text = (
+                f"⚠️ <b>SHIKOYAT — {order_number}</b>\n\n"
+                f"Mijoz: {client_name}\n"
+                f"Usta: {master_name}\n"
+                f"Muammo: <i>{issue_text}</i>\n\n"
+                f"⚡ Buyurtma holati «jarayonda» ga qaytarildi.\n"
+                f"Iltimos, mijoz bilan bog'laning!"
+            )
+            _q().enqueue(telegram_id=int(ADMIN_GROUP_CHAT_ID), message=group_text)
     except Exception:
         logger.exception("Failed to fetch admins for dispute notification")
 
