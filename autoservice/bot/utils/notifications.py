@@ -140,7 +140,7 @@ async def notify_admin_dispute_with_text(
             _q().enqueue(telegram_id=admin["telegram_id"], message=text)
         
         # Also send to admin group chat if configured
-        from web.config import ADMIN_GROUP_CHAT_ID
+        from bot.config import ADMIN_GROUP_CHAT_ID
         if ADMIN_GROUP_CHAT_ID:
             group_text = (
                 f"⚠️ <b>SHIKOYAT — {order_number}</b>\n\n"

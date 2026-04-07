@@ -404,6 +404,23 @@ async def dispute_issue_text_handler(message: Message, state: FSMContext, db_use
                 master["telegram_id"], order_number, client_name, issue_text, lang=master_lang
             )
     await notify_admin_dispute_with_text(order_number, client_name, master_name, issue_text)
+
+    # Send directly to admin group chat
+    from bot.config import ADMIN_GROUP_CHAT_ID
+    if ADMIN_GROUP_CHAT_ID:
+        group_text = (
+            f"⚠️ <b>SHIKOYAT — {order_number}</b>\n\n"
+            f"Mijoz: {client_name}\n"
+            f"Usta: {master_name}\n"
+            f"Muammo: <i>{issue_text}</i>\n\n"
+            f"⚡ Buyurtma holati «jarayonda» ga qaytarildi.\n"
+            f"Iltimos, mijoz bilan bog'laning!"
+        )
+        try:
+            await bot.send_message(int(ADMIN_GROUP_CHAT_ID), group_text, parse_mode="HTML")
+        except Exception:
+            logger.warning("Failed to send dispute notification to admin group %s", ADMIN_GROUP_CHAT_ID)
+
     await message.answer(t("dispute_reported", lang), reply_markup=get_main_keyboard("client", lang))
 
 

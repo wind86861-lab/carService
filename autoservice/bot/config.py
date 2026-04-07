@@ -12,3 +12,4 @@ ADMIN_IDS: list[int] = [
 ]
 BOT_USERNAME: str = os.getenv("BOT_USERNAME", "")
 WEB_URL: str = os.getenv("WEB_URL", "http://localhost:8000")
+ADMIN_GROUP_CHAT_ID: str = os.getenv("ADMIN_GROUP_CHAT_ID", "")
