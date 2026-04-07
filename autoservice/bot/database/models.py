@@ -1181,27 +1181,28 @@ async def get_filtered_clients(
         where = ["u.role = 'client'", "u.is_active = TRUE"]
         params: dict = {}
         
-        if date_from or date_to or visit_count:
-            # Build subquery for order count within date range
-            count_where = []
-            if date_from:
-                count_where.append("o.created_at >= :date_from")
-                params["date_from"] = datetime.fromisoformat(date_from).date()
-            if date_to:
-                count_where.append("o.created_at <= :date_to")
-                params["date_to"] = datetime.fromisoformat(date_to).date()
-            
-            count_where_sql = " AND ".join(count_where) if count_where else "1=1"
-            
-            if visit_count:
-                where.append(
-                    f"(SELECT COUNT(*) FROM orders o WHERE o.client_id = u.id AND {count_where_sql}) = :visit_count"
-                )
-                params["visit_count"] = visit_count
-            else:
-                where.append(
-                    f"EXISTS (SELECT 1 FROM orders o WHERE o.client_id = u.id AND {count_where_sql})"
-                )
+        # Build the date filter conditions for the subquery
+        date_conditions = []
+        if date_from:
+            date_conditions.append("o.created_at::date >= :date_from")
+            params["date_from"] = datetime.fromisoformat(date_from).date()
+        if date_to:
+            date_conditions.append("o.created_at::date <= :date_to")
+            params["date_to"] = datetime.fromisoformat(date_to).date()
+        
+        date_filter = " AND " + " AND ".join(date_conditions) if date_conditions else ""
+        
+        if visit_count is not None:
+            # Filter by exact visit count within date range
+            where.append(
+                f":visit_count = (SELECT COUNT(*) FROM orders o WHERE o.client_id = u.id{date_filter})"
+            )
+            params["visit_count"] = visit_count
+        elif date_conditions:
+            # Filter by date range only (at least one order in range)
+            where.append(
+                f"EXISTS (SELECT 1 FROM orders o WHERE o.client_id = u.id{date_filter})"
+            )
         
         where_sql = " AND ".join(where)
         
